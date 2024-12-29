@@ -52,7 +52,7 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     <button onclick="toggleKey('{{ key.id }}')" class="text-indigo-600 hover:text-indigo-900">
-                                        {{ key.is_active and 'Deactivate' or 'Activate' }}
+                                        {% if key.is_active %}Deactivate{% else %}Activate{% endif %}
                                     </button>
                                 </td>
                             </tr>
@@ -83,7 +83,7 @@
                     <dl class="grid grid-cols-1 gap-5 sm:grid-cols-2">
                         <div class="px-4 py-5 bg-gray-50 shadow rounded-lg overflow-hidden sm:p-6">
                             <dt class="text-sm font-medium text-gray-500 truncate">Current Month Usage</dt>
-                            <dd class="mt-1 text-3xl font-semibold text-gray-900">${{ current_month_cost }}</dd>
+                            <dd class="mt-1 text-3xl font-semibold text-gray-900">${{ "%.4f"|format(current_month_cost) }}</dd>
                         </div>
                         <div class="px-4 py-5 bg-gray-50 shadow rounded-lg overflow-hidden sm:p-6">
                             <dt class="text-sm font-medium text-gray-500 truncate">Total Requests</dt>
@@ -114,7 +114,7 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ usage.timestamp }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ usage.model.name }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ usage.tokens_used }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${{ "%.2f"|format(usage.cost) }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${{ "%.4f"|format(usage.cost) }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -169,11 +169,23 @@
         }
 
         async function toggleKey(keyId) {
-            const response = await fetch(`/keys/${keyId}/toggle`, {
-                method: 'POST'
-            });
-            if (response.ok) {
-                location.reload();
+            try {
+                const response = await fetch(`/api/keys/${keyId}/toggle`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    // Refresh the page to show updated status
+                    window.location.reload();
+                } else {
+                    alert('Failed to toggle API key status');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error toggling API key status');
             }
         }
     </script>
