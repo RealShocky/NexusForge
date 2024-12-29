@@ -151,7 +151,7 @@
         async function createNewKey() {
             const name = prompt('Enter a name for the new API key:');
             if (name) {
-                const response = await fetch('/keys', {
+                const response = await fetch('/api/keys', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
