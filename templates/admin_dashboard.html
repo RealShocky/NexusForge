@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Flows</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="min-h-screen">
+        <!-- Sidebar -->
+        <aside class="fixed inset-y-0 left-0 bg-white shadow-lg w-64">
+            <div class="flex flex-col h-full">
+                <div class="flex items-center justify-center h-16 px-4 bg-indigo-600">
+                    <h1 class="text-xl font-bold text-white">Flows Admin</h1>
+                </div>
+                <nav class="flex-1 p-4 space-y-2">
+                    <a href="#overview" class="flex items-center px-4 py-2 text-gray-700 bg-gray-100 rounded-lg">
+                        <span class="ml-3">Overview</span>
+                    </a>
+                    <a href="#customers" class="flex items-center px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">
+                        <span class="ml-3">Customers</span>
+                    </a>
+                    <a href="#api-keys" class="flex items-center px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">
+                        <span class="ml-3">API Keys</span>
+                    </a>
+                    <a href="#models" class="flex items-center px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">
+                        <span class="ml-3">Models</span>
+                    </a>
+                    <a href="#usage" class="flex items-center px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">
+                        <span class="ml-3">Usage</span>
+                    </a>
+                </nav>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="ml-64 p-8">
+            <!-- Overview Section -->
+            <section id="overview" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <!-- Stats Cards -->
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-gray-500 text-sm font-medium">Total Customers</h3>
+                        <p class="text-3xl font-bold text-gray-900">{{ total_customers }}</p>
+                        <div class="mt-2 flex items-center text-sm">
+                            <span class="text-green-500">↑ 12%</span>
+                            <span class="text-gray-500 ml-2">from last month</span>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-gray-500 text-sm font-medium">Active API Keys</h3>
+                        <p class="text-3xl font-bold text-gray-900">{{ active_api_keys }}</p>
+                        <div class="mt-2 flex items-center text-sm">
+                            <span class="text-green-500">↑ 8%</span>
+                            <span class="text-gray-500 ml-2">from last month</span>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-gray-500 text-sm font-medium">Total Usage</h3>
+                        <p class="text-3xl font-bold text-gray-900">{{ total_usage }}</p>
+                        <div class="mt-2 flex items-center text-sm">
+                            <span class="text-green-500">↑ 23%</span>
+                            <span class="text-gray-500 ml-2">from last month</span>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-gray-500 text-sm font-medium">Total Revenue</h3>
+                        <p class="text-3xl font-bold text-gray-900">${{ total_revenue }}</p>
+                        <div class="mt-2 flex items-center text-sm">
+                            <span class="text-green-500">↑ 15%</span>
+                            <span class="text-gray-500 ml-2">from last month</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Usage Chart -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Usage Over Time</h3>
+                    <canvas id="usageChart" height="100"></canvas>
+                </div>
+            </section>
+
+            <!-- Customers Section -->
+            <section id="customers" class="hidden space-y-6 mt-8">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-bold text-gray-900">Customers</h2>
+                    <button onclick="showAddCustomerModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">
+                        Add Customer
+                    </button>
+                </div>
+                <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">API Keys</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for customer in customers %}
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap">{{ customer.name }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">{{ customer.email }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">{{ customer.company }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">{{ customer.api_keys|length }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <button onclick="viewCustomer({{ customer.id }})" class="text-indigo-600 hover:text-indigo-900">View</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- API Keys Section -->
+            <section id="api-keys" class="hidden space-y-6 mt-8">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-bold text-gray-900">API Keys</h2>
+                </div>
+                <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Key</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for key in api_keys %}
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap font-mono text-sm">{{ key.key }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">{{ key.customer_email }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ 'bg-green-100 text-green-800' if key.active else 'bg-red-100 text-red-800' }}">
+                                        {{ 'Active' if key.active else 'Inactive' }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">{{ key.created_at }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <button onclick="toggleApiKey({{ key.id }})" class="text-indigo-600 hover:text-indigo-900">
+                                        {{ 'Deactivate' if key.active else 'Activate' }}
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Models Section -->
+            <section id="models" class="hidden space-y-6 mt-8">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-bold text-gray-900">Models</h2>
+                    <button onclick="showAddModelModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">
+                        Add Model
+                    </button>
+                </div>
+                <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">API Base</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for model in models %}
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap">{{ model.name }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">{{ model.model_type }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">{{ model.api_base }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <button onclick="editModel({{ model.id }})" class="text-indigo-600 hover:text-indigo-900">Edit</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Navigation
+        const sections = ['overview', 'customers', 'api-keys', 'models'];
+        const navLinks = document.querySelectorAll('nav a');
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetId = link.getAttribute('href').substring(1);
+                sections.forEach(section => {
+                    const el = document.getElementById(section);
+                    if (el) {
+                        el.classList.toggle('hidden', section !== targetId);
+                    }
+                });
+                navLinks.forEach(l => {
+                    l.classList.toggle('bg-gray-100', l === link);
+                });
+            });
+        });
+
+        // Usage Chart
+        const ctx = document.getElementById('usageChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: {{ usage_dates|tojson }},
+                datasets: [{
+                    label: 'API Calls',
+                    data: {{ usage_counts|tojson }},
+                    borderColor: 'rgb(79, 70, 229)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // API Functions
+        async function toggleApiKey(keyId) {
+            try {
+                const response = await fetch(`/api/keys/${keyId}/toggle`, {
+                    method: 'POST'
+                });
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    alert('Failed to toggle API key');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to toggle API key');
+            }
+        }
+
+        async function viewCustomer(customerId) {
+            window.location.href = `/dashboard/${customerId}`;
+        }
+    </script>
+</body>
+</html>

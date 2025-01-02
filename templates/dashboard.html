@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI API Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-gray-100">
     <nav class="bg-white shadow-lg">
@@ -51,7 +50,7 @@
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    <button onclick="toggleKey('{{ key.id }}')" class="text-indigo-600 hover:text-indigo-900">
+                                    <button onclick="toggleAPIKey('{{ key.id }}')" class="text-indigo-600 hover:text-indigo-900">
                                         {% if key.is_active %}Deactivate{% else %}Activate{% endif %}
                                     </button>
                                 </td>
@@ -94,6 +93,17 @@
             </div>
         </div>
 
+        <!-- Payment Methods -->
+        <div class="bg-white shadow rounded-lg mb-6">
+            <div class="px-4 py-5 sm:p-6">
+                <h2 class="text-lg font-medium mb-4">Payment Methods</h2>
+                <div id="payment-methods-list"></div>
+                <button onclick="showAddPaymentMethod()" class="mt-4 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
+                    Add Payment Method
+                </button>
+            </div>
+        </div>
+
         <!-- Recent Usage -->
         <div class="bg-white shadow rounded-lg">
             <div class="px-4 py-5 sm:p-6">
@@ -124,68 +134,270 @@
         </div>
     </main>
 
+    <!-- Payment Modal -->
+    <div id="payment-modal" class="hidden fixed z-10 inset-0 overflow-y-auto" aria-labelledby="payment-modal-label" role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="sm:flex sm:items-start">
+                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                            <h3 id="payment-modal-label" class="text-lg leading-6 font-medium text-gray-900">Add Payment Method</h3>
+                            <form id="payment-form" class="mt-4">
+                                <div id="card-element" class="p-4 border rounded"></div>
+                                <div class="mt-4 flex justify-end">
+                                    <button type="button" onclick="hidePaymentModal()" class="mr-2 px-4 py-2 text-gray-500 hover:text-gray-700">Cancel</button>
+                                    <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">Add Payment Method</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <script src="https://js.stripe.com/v3/"></script>
     <script>
-        // Initialize usage chart
-        const ctx = document.getElementById('usageChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: {{ usage_dates|tojson }},
-                datasets: [{
-                    label: 'API Calls',
-                    data: {{ usage_counts|tojson }},
-                    borderColor: 'rgb(79, 70, 229)',
-                    tension: 0.1
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: {
-                        beginAtZero: true
+        document.addEventListener('DOMContentLoaded', function() {
+            const stripe = Stripe('{{ stripe_public_key }}');
+            const elements = stripe.elements();
+
+            // Initialize usage chart
+            const ctx = document.getElementById('usageChart');
+            if (ctx) {
+                new Chart(ctx.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: {{ usage_labels | tojson }},
+                        datasets: [{
+                            label: 'API Usage',
+                            data: {{ usage_data | tojson }},
+                            borderColor: 'rgb(75, 192, 192)',
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
                     }
-                }
+                });
             }
+
+            // Initialize payment form
+            const paymentForm = document.getElementById('payment-form');
+            if (paymentForm) {
+                paymentForm.addEventListener('submit', handlePaymentSubmit);
+            }
+
+            // Rest of your JavaScript
         });
 
-        async function createNewKey() {
-            const name = prompt('Enter a name for the new API key:');
-            if (name) {
-                const response = await fetch('/api/keys', {
+        async function handlePaymentSubmit(e) {
+            e.preventDefault();
+            const button = e.target.querySelector('button[type="submit"]');
+            button.disabled = true;
+
+            try {
+                const { setupIntent, error } = await stripe.confirmSetup({
+                    elements,
+                    confirmParams: {
+                        return_url: window.location.href,
+                    }
+                });
+
+                if (error) {
+                    throw new Error(error.message);
+                }
+
+                // Attach payment method to customer
+                const response = await fetch('/attach-payment-method/1', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ 
-                        customer_email: '{{ customer.email }}',
-                        name: name,
-                        allowed_models: []
+                    body: JSON.stringify({
+                        payment_method_id: setupIntent.payment_method,
+                    }),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to attach payment method');
+                }
+
+                alert('Payment method added successfully');
+                hidePaymentModal();
+                loadPaymentMethods();
+            } catch (error) {
+                console.error('Error:', error);
+                alert(error.message);
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        async function showAddPaymentMethod() {
+            try {
+                // Get setup intent
+                const response = await fetch('/setup-intent/1', {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to create setup intent');
+                }
+                
+                const { client_secret } = await response.json();
+                clientSecret = client_secret;
+
+                // Show modal
+                document.getElementById('payment-modal').classList.remove('hidden');
+
+                // Initialize Elements if not already done
+                if (!elements) {
+                    elements = stripe.elements({
+                        clientSecret: clientSecret,
+                        appearance: {
+                            theme: 'stripe'
+                        }
+                    });
+                    const paymentElement = elements.create('payment');
+                    paymentElement.mount('#card-element');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error setting up payment form');
+            }
+        }
+
+        function hidePaymentModal() {
+            document.getElementById('payment-modal').classList.add('hidden');
+            if (elements) {
+                elements = null;
+                const cardElement = document.getElementById('card-element');
+                cardElement.innerHTML = '';
+            }
+        }
+
+        async function loadPaymentMethods() {
+            try {
+                const response = await fetch('/payment-methods/{{ customer.id }}');
+                const data = await response.json();
+                
+                const container = document.getElementById('payment-methods-list');
+                container.innerHTML = '';
+                
+                if (data.payment_methods && data.payment_methods.length > 0) {
+                    const list = document.createElement('ul');
+                    list.className = 'space-y-3';
+                    
+                    data.payment_methods.forEach(method => {
+                        const li = document.createElement('li');
+                        li.className = 'flex justify-between items-center p-3 bg-gray-50 rounded';
+                        li.innerHTML = `
+                            <div>
+                                <span class="font-medium">•••• ${method.card.last4}</span>
+                                <span class="text-gray-500 text-sm ml-2">Expires ${method.card.exp_month}/${method.card.exp_year}</span>
+                            </div>
+                            <button onclick="setDefaultPaymentMethod('${method.id}')" class="text-indigo-600 hover:text-indigo-900">
+                                Set as Default
+                            </button>
+                        `;
+                        list.appendChild(li);
+                    });
+                    container.appendChild(list);
+                } else {
+                    container.innerHTML = '<p class="text-gray-500">No payment methods added yet.</p>';
+                }
+            } catch (error) {
+                console.error('Error loading payment methods:', error);
+            }
+        }
+
+        async function setDefaultPaymentMethod(paymentMethodId) {
+            try {
+                const response = await fetch('/setup-automatic-payments/{{ customer.id }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        payment_method_id: paymentMethodId
                     })
                 });
+                
                 if (response.ok) {
-                    location.reload();
+                    alert('Default payment method updated successfully');
+                    loadPaymentMethods();
+                } else {
+                    throw new Error('Failed to update default payment method');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to update default payment method');
+            }
+        }
+
+        async function createNewKey() {
+            const name = prompt('Enter a name for the new API key:');
+            if (name) {
+                try {
+                    const response = await fetch('/api-key', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ 
+                            customer_id: {{ customer.id }},
+                            name: name
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        const error = await response.json();
+                        console.error('Error response:', error);
+                        alert('Failed to create key: ' + (error.error || 'Unknown error'));
+                        return;
+                    }
+
+                    const result = await response.json();
+                    console.log('Key created:', result);
+                    window.location.reload();
+                } catch (error) {
+                    console.error('Error creating key:', error);
+                    alert('Failed to create key: ' + error.message);
                 }
             }
         }
 
-        async function toggleKey(keyId) {
+        async function toggleAPIKey(keyId) {
             try {
-                const response = await fetch(`/api/keys/${keyId}/toggle`, {
+                const response = await fetch(`/api-key/${keyId}/toggle`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     }
                 });
                 
-                if (response.ok) {
-                    // Refresh the page to show updated status
-                    window.location.reload();
-                } else {
-                    alert('Failed to toggle API key status');
+                if (!response.ok) {
+                    const error = await response.json();
+                    console.error('Error response:', error);
+                    alert('Failed to toggle API key: ' + (error.error || 'Unknown error'));
+                    return;
                 }
+
+                const result = await response.json();
+                console.log('Key toggled:', result);
+                window.location.reload();
             } catch (error) {
-                console.error('Error:', error);
-                alert('Error toggling API key status');
+                console.error('Error toggling key:', error);
+                alert('Failed to toggle key: ' + error.message);
             }
         }
     </script>
