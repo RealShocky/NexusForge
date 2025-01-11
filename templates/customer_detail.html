@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Customer Details - {{ customer.name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="mb-8">
+        <a href="/admin" class="text-indigo-600 hover:text-indigo-900">← Back to Admin Dashboard</a>
+    </div>
+
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+        <div class="px-4 py-5 sm:px-6">
+            <h2 class="text-2xl font-bold">Customer Details</h2>
+        </div>
+        
+        <!-- Customer Information -->
+        <div class="border-t border-gray-200 px-4 py-5 sm:p-6">
+            <dl class="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2">
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Name</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ customer.name }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Email</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ customer.email }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Company</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ customer.company }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Created At</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ customer.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</dd>
+                </div>
+            </dl>
+        </div>
+
+        <!-- Stripe Information -->
+        <div class="border-t border-gray-200 px-4 py-5 sm:p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Stripe Information</h3>
+            {% if stripe_customer %}
+            <dl class="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2">
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Stripe Customer ID</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ customer.stripe_customer_id }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Default Payment Method</dt>
+                    <dd class="mt-1 text-sm text-gray-900">
+                        {% if stripe_customer.default_source %}
+                        {{ stripe_customer.default_source }}
+                        {% else %}
+                        No default payment method
+                        {% endif %}
+                    </dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Account Balance</dt>
+                    <dd class="mt-1 text-sm text-gray-900">${{ stripe_customer.account_balance / 100 if stripe_customer.account_balance else '0.00' }}</dd>
+                </div>
+            </dl>
+            {% else %}
+            <p class="text-sm text-gray-500">No Stripe customer information available.</p>
+            {% if not customer.stripe_customer_id %}
+            <form action="/admin/customer/{{ customer.id }}/sync" method="POST" class="mt-4">
+                <button type="submit"
+                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Sync with Stripe
+                </button>
+            </form>
+            {% endif %}
+            {% endif %}
+        </div>
+
+        <!-- API Keys -->
+        <div class="border-t border-gray-200 px-4 py-5 sm:p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">API Keys</h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead>
+                        <tr>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Key</th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for api_key in customer.api_keys %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ api_key.name }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ api_key.key }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {% if api_key.is_active %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Active</span>
+                                {% else %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Inactive</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

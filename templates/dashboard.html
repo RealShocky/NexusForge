@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI API Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://js.stripe.com/v3/"></script>
 </head>
 <body class="bg-gray-100">
     <nav class="bg-white shadow-lg">
@@ -101,6 +102,13 @@
                 <button onclick="showAddPaymentMethod()" class="mt-4 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
                     Add Payment Method
                 </button>
+                <form id="payment-form" style="display: none;" class="mt-4 space-y-4 max-w-md">
+                    <div id="payment-element" class="p-4 bg-white rounded-lg shadow"></div>
+                    <button type="submit" class="w-full bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                        Save Payment Method
+                    </button>
+                    <div id="payment-message" class="text-sm text-gray-600"></div>
+                </form>
             </div>
         </div>
 
@@ -158,13 +166,27 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
-    <script src="https://js.stripe.com/v3/"></script>
     <script>
+        // Initialize Stripe globally
+        let stripe;
+        let elements;
+        
         document.addEventListener('DOMContentLoaded', function() {
-            const stripe = Stripe('{{ stripe_public_key }}');
-            const elements = stripe.elements();
+            stripe = Stripe('{{ stripe_public_key }}');
 
-            // Initialize usage chart
+            // Check URL for setup success
+            const urlParams = new URLSearchParams(window.location.search);
+            const setupIntentId = urlParams.get('setup_intent');
+            const redirectStatus = urlParams.get('redirect_status');
+            
+            if (setupIntentId && redirectStatus === 'succeeded') {
+                const messageDiv = document.getElementById('payment-message');
+                messageDiv.textContent = 'Payment method saved successfully!';
+                messageDiv.classList.add('text-green-600');
+                // Remove query parameters
+                window.history.replaceState({}, '', window.location.pathname);
+            }
+            
             const ctx = document.getElementById('usageChart');
             if (ctx) {
                 new Chart(ctx.getContext('2d'), {
@@ -243,35 +265,92 @@
 
         async function showAddPaymentMethod() {
             try {
-                // Get setup intent
-                const response = await fetch('/setup-intent/1', {
-                    method: 'POST'
+                if (!stripe) {
+                    stripe = Stripe('{{ stripe_public_key }}');
+                }
+
+                // Get the setup intent
+                const response = await fetch(`/setup-intent/{{ customer.id }}`, {
+                    method: 'POST',
                 });
-                
-                if (!response.ok) {
-                    throw new Error('Failed to create setup intent');
-                }
-                
-                const { client_secret } = await response.json();
-                clientSecret = client_secret;
+                const data = await response.json();
 
-                // Show modal
-                document.getElementById('payment-modal').classList.remove('hidden');
+                // Create payment element
+                elements = stripe.elements();
+                
+                // Use card element instead of payment element for local development
+                const cardElement = elements.create('card', {
+                    style: {
+                        base: {
+                            fontSize: '16px',
+                            color: '#424770',
+                            '::placeholder': {
+                                color: '#aab7c4',
+                            },
+                        },
+                        invalid: {
+                            color: '#9e2146',
+                        },
+                    },
+                });
 
-                // Initialize Elements if not already done
-                if (!elements) {
-                    elements = stripe.elements({
-                        clientSecret: clientSecret,
-                        appearance: {
-                            theme: 'stripe'
+                // Clear previous payment element if exists
+                const paymentContainer = document.getElementById('payment-element');
+                paymentContainer.innerHTML = '';
+                cardElement.mount('#payment-element');
+
+                // Show the form
+                document.getElementById('payment-form').style.display = 'block';
+
+                // Handle form submission
+                const form = document.getElementById('payment-form');
+                const messageDiv = document.getElementById('payment-message');
+                const submitButton = form.querySelector('button[type="submit"]');
+
+                form.addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    
+                    // Disable the submit button to prevent multiple clicks
+                    submitButton.disabled = true;
+                    submitButton.textContent = 'Processing...';
+                    messageDiv.textContent = '';
+
+                    try {
+                        const {error, setupIntent} = await stripe.confirmCardSetup(
+                            data.clientSecret,
+                            {
+                                payment_method: {
+                                    card: cardElement
+                                }
+                            }
+                        );
+
+                        if (error) {
+                            messageDiv.textContent = error.message;
+                            messageDiv.classList.add('text-red-600');
+                            submitButton.disabled = false;
+                            submitButton.textContent = 'Save Payment Method';
+                        } else if (setupIntent.status === 'succeeded') {
+                            messageDiv.textContent = 'Payment method saved successfully!';
+                            messageDiv.classList.add('text-green-600');
+                            // Reload page after successful setup
+                            setTimeout(() => window.location.reload(), 1000);
+                        } else {
+                            messageDiv.textContent = 'Unexpected status: ' + setupIntent.status;
+                            messageDiv.classList.add('text-red-600');
+                            submitButton.disabled = false;
+                            submitButton.textContent = 'Save Payment Method';
                         }
-                    });
-                    const paymentElement = elements.create('payment');
-                    paymentElement.mount('#card-element');
-                }
+                    } catch (error) {
+                        messageDiv.textContent = error.message;
+                        messageDiv.classList.add('text-red-600');
+                        submitButton.disabled = false;
+                        submitButton.textContent = 'Save Payment Method';
+                    }
+                });
             } catch (error) {
                 console.error('Error:', error);
-                alert('Error setting up payment form');
+                alert('Error: ' + error.message);
             }
         }
 

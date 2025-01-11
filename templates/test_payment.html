@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}Test Payment UI{% endblock %}
+
+{% block head %}
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .payment-form {
+            padding: 30px;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .form-row {
+            margin: 20px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #344767;
+        }
+        input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #635bff;
+        }
+        #card-element {
+            padding: 12px;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            background-color: #fff;
+        }
+        button {
+            background: #635bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            width: 100%;
+            margin-top: 20px;
+        }
+        button:hover {
+            background: #4b44c9;
+        }
+        button:disabled {
+            background: #e9ecef;
+            cursor: not-allowed;
+        }
+        #payment-status {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+        .error {
+            color: #dc3545;
+            background-color: #fdf0f0;
+            border: 1px solid #fad7d7;
+        }
+        .success {
+            color: #28a745;
+            background-color: #f0fdf0;
+            border: 1px solid #d7fad7;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="payment-form">
+        <h2>Test Payment UI</h2>
+        <form id="payment-form">
+            <div class="form-row">
+                <label>Amount (USD)</label>
+                <input type="number" id="amount" value="10" min="1" step="1">
+            </div>
+            <div class="form-row">
+                <label>Card Details</label>
+                <div id="card-element"></div>
+                <div id="card-errors" class="error" role="alert"></div>
+            </div>
+            <button type="submit" id="submit-button">Pay Now</button>
+        </form>
+        <div id="payment-status"></div>
+    </div>
+
+    <script>
+        console.log('Initializing Stripe...');
+        const stripe = Stripe('{{ stripe_public_key }}');
+        console.log('Stripe initialized with public key ending in:', '{{ stripe_public_key }}'.slice(-4));
+        
+        const elements = stripe.elements();
+        const card = elements.create('card');
+        card.mount('#card-element');
+        console.log('Card element mounted');
+
+        const form = document.getElementById('payment-form');
+        const submitButton = document.getElementById('submit-button');
+        const paymentStatus = document.getElementById('payment-status');
+
+        card.addEventListener('change', ({error}) => {
+            const displayError = document.getElementById('card-errors');
+            if (error) {
+                console.error('Card validation error:', error.message);
+                displayError.textContent = error.message;
+            } else {
+                displayError.textContent = '';
+            }
+        });
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            console.log('Payment form submitted');
+            
+            submitButton.disabled = true;
+            const amount = document.getElementById('amount').value;
+            console.log('Amount:', amount);
+
+            try {
+                console.log('Creating payment intent...');
+                const response = await fetch('/create-payment-intent', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ amount: parseFloat(amount) })
+                });
+
+                const data = await response.json();
+                console.log('Payment intent created');
+                
+                console.log('Confirming card payment...');
+                const result = await stripe.confirmCardPayment(data.clientSecret, {
+                    payment_method: {
+                        card: card,
+                    }
+                });
+
+                if (result.error) {
+                    console.error('Payment failed:', result.error.message);
+                    paymentStatus.className = 'error';
+                    paymentStatus.textContent = result.error.message;
+                } else {
+                    console.log('Payment successful:', result.paymentIntent.id);
+                    paymentStatus.className = 'success';
+                    paymentStatus.textContent = 'Payment successful! Payment ID: ' + result.paymentIntent.id;
+                }
+            } catch (err) {
+                console.error('Payment error:', err);
+                paymentStatus.className = 'error';
+                paymentStatus.textContent = 'An error occurred. Please try again.';
+            }
+
+            submitButton.disabled = false;
+        });
+    </script>
+{% endblock %}

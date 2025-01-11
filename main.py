@@ -30,6 +30,9 @@ from fastapi.middleware.cors import CORSMiddleware
 # Load environment variables
 load_dotenv()
 
+# Initialize Stripe
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -40,53 +43,36 @@ logger = logging.getLogger(__name__)
 # Initialize FastAPI app
 app = FastAPI()
 
-# Set up CORS
+# Configure templates and static files
+templates = Jinja2Templates(directory=str(os.path.join(os.path.dirname(__file__), "templates")))
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Allow all origins in development
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,
 )
 
-# Set up templates
-templates = Jinja2Templates(directory="templates")
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
-# Initialize database
-Base.metadata.create_all(bind=engine)
-init_db()  # Initialize default data if needed
-
-# Initialize services
-rate_limiter = RateLimiter()
-billing_service = BillingService(os.getenv("STRIPE_SECRET_KEY"))
-
-# Initialize Stripe
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-
-# Initialize OpenTelemetry
-tracer_provider = TracerProvider()
-otlp_exporter = OTLPSpanExporter(endpoint="http://localhost:4317")
-span_processor = BatchSpanProcessor(otlp_exporter)
-tracer_provider.add_span_processor(span_processor)
-trace.set_tracer_provider(tracer_provider)
-FastAPIInstrumentor.instrument_app(app)
-
-# Security middleware
+# Add security headers middleware
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     response.headers["Content-Security-Policy"] = (
-        "default-src 'self' https:; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://cdn.jsdelivr.net https://cdn.jsdelivr.net; "
-        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.stripe.com; "
-        "font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com https://js.stripe.com data: *; "
+        "default-src 'self' https://js.stripe.com https://api.stripe.com; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com https://cdn.jsdelivr.net; "
+        "script-src 'self' https://js.stripe.com 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "font-src 'self' https://fonts.gstatic.com data: https://cdn.jsdelivr.net; "
         "img-src 'self' data: https:; "
-        "frame-src 'self' https://js.stripe.com; "
-        "connect-src 'self' https://api.stripe.com https://merchant-ui-api.stripe.com;"
+        "connect-src 'self' https://api.stripe.com;"
     )
     return response
 
@@ -632,44 +618,89 @@ async def add_knowledge(
 async def create_setup_intent(customer_id: int, db: Session = Depends(get_db)):
     """Create a setup intent for adding a payment method"""
     try:
-        # Get customer
-        customer = db.query(Customer).filter_by(id=customer_id).first()
+        # Get customer from database
+        customer = db.query(Customer).filter(Customer.id == customer_id).first()
         if not customer:
-            return JSONResponse(
-                status_code=404,
-                content={"error": "Customer not found"}
-            )
-
+            raise HTTPException(status_code=404, detail="Customer not found")
+            
         if not customer.stripe_customer_id:
-            return JSONResponse(
-                status_code=400,
-                content={"error": "Customer does not have a Stripe account"}
-            )
-
-        try:
-            # Create setup intent in Stripe
-            setup_intent = stripe.SetupIntent.create(
-                customer=customer.stripe_customer_id,
-                payment_method_types=['card'],
-            )
+            raise HTTPException(status_code=400, detail="Customer not synced with Stripe")
             
-            return JSONResponse(
-                status_code=200,
-                content={"client_secret": setup_intent.client_secret}
-            )
-        except stripe.error.StripeError as e:
-            logger.error(f"Stripe error creating setup intent: {str(e)}")
-            return JSONResponse(
-                status_code=400,
-                content={"error": str(e)}
-            )
-            
+        logger.info(f"Creating setup intent for customer: {customer.stripe_customer_id}")
+        stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+        
+        # Create setup intent using Stripe customer ID
+        setup_intent = stripe.SetupIntent.create(
+            customer=customer.stripe_customer_id,  # Use Stripe customer ID here
+            payment_method_types=['card'],
+            usage='off_session'  # Allow future off-session payments
+        )
+        
+        logger.info(f"Setup intent created successfully: {setup_intent.id}")
+        return {"clientSecret": setup_intent.client_secret}
     except Exception as e:
         logger.error(f"Error creating setup intent: {str(e)}")
-        return JSONResponse(
-            status_code=500,
-            content={"error": "Internal server error"}
+        logger.exception("Full setup intent error:")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/setup-intent")
+async def create_setup_intent_no_customer():
+    """Create a setup intent without a customer (for testing)"""
+    try:
+        logger.info("Creating setup intent without customer")
+        stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+        
+        # Create setup intent without customer
+        setup_intent = stripe.SetupIntent.create(
+            payment_method_types=['card']
         )
+        
+        logger.info(f"Setup intent created successfully: {setup_intent.id}")
+        return {"clientSecret": setup_intent.client_secret}
+    except Exception as e:
+        logger.error(f"Error creating setup intent: {str(e)}")
+        logger.exception("Full setup intent error:")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/setup-intent/1")  # Match the exact URL being called
+async def create_setup_intent_simple():
+    """Create a setup intent without requiring storage"""
+    try:
+        logger.info("Creating simple setup intent")
+        stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+        
+        # Create setup intent with minimal configuration
+        setup_intent = stripe.SetupIntent.create(
+            payment_method_types=['card'],
+            usage='off_session'
+        )
+        
+        # Add CORS headers explicitly
+        headers = {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type",
+        }
+        
+        logger.info(f"Setup intent created successfully: {setup_intent.id}")
+        return JSONResponse(
+            content={"clientSecret": setup_intent.client_secret},
+            headers=headers
+        )
+    except Exception as e:
+        logger.error(f"Error creating setup intent: {str(e)}")
+        logger.exception("Full setup intent error:")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.options("/setup-intent/1")
+async def setup_intent_options():
+    """Handle OPTIONS request for CORS"""
+    headers = {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+    }
+    return JSONResponse(content={}, headers=headers)
 
 @app.get("/payment-methods/{customer_id}")
 async def get_payment_methods(customer_id: int, db: Session = Depends(get_db)):
@@ -772,6 +803,116 @@ async def setup_automatic_payments(customer_id: int, payment_method_id: str = Bo
         return JSONResponse(status_code=200, content={"message": "Automatic payments configured successfully"})
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.get("/test-payment", response_class=HTMLResponse)
+async def test_payment(request: Request):
+    """Test payment page"""
+    try:
+        logger.info("Accessing test payment page")
+        # Check if we're on HTTPS
+        is_https = request.url.scheme == "https"
+        if not is_https and not os.getenv("DEVELOPMENT_MODE", "false").lower() == "true":
+            logger.warning("Stripe requires HTTPS in production. Redirecting to HTTPS.")
+            return RedirectResponse(url=str(request.url.replace(scheme="https")))
+            
+        return templates.TemplateResponse(
+            "test_payment.html",
+            {
+                "request": request,
+                "stripe_public_key": os.getenv("STRIPE_PUBLIC_KEY"),
+                "is_development": os.getenv("DEVELOPMENT_MODE", "false").lower() == "true"
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error rendering test payment page: {str(e)}")
+        logger.exception(e)
+        return templates.TemplateResponse(
+            "error.html",
+            {
+                "request": request,
+                "error_message": str(e)
+            }
+        )
+
+@app.post("/create-payment-intent")
+async def create_payment_intent(amount: dict):
+    logger.info("=== Starting payment intent creation ===")
+    logger.info(f"Received request with amount: {amount}")
+    
+    try:
+        logger.info(f"Creating payment intent for amount: {amount}")
+        stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+        
+        # Log the API key being used (last 4 characters only)
+        api_key = os.getenv("STRIPE_SECRET_KEY")
+        logger.info(f"Using Stripe API key ending in: ...{api_key[-4:]}")
+        
+        # Convert amount to cents and create intent
+        amount_cents = int(amount["amount"] * 100)
+        logger.info(f"Converting ${amount['amount']} to {amount_cents} cents")
+        
+        intent = stripe.PaymentIntent.create(
+            amount=amount_cents,
+            currency="usd",
+            metadata={"integration_check": "accept_a_payment"}
+        )
+        
+        logger.info(f"Payment intent created successfully: {intent.id}")
+        logger.info(f"Payment intent status: {intent.status}")
+        logger.info(f"Payment intent amount: ${intent.amount/100:.2f} USD")
+        logger.info("=== Payment intent creation completed ===")
+        
+        return {"clientSecret": intent.client_secret}
+    except Exception as e:
+        logger.error("=== Payment intent creation failed ===")
+        logger.error(f"Error creating payment intent: {str(e)}")
+        logger.exception("Full payment intent error:")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/stripe-webhook")
+async def stripe_webhook(request: Request):
+    """Handle Stripe webhooks"""
+    try:
+        event = None
+        payload = await request.body()
+        sig_header = request.headers.get("stripe-signature")
+        
+        try:
+            event = stripe.Webhook.construct_event(
+                payload, sig_header, os.getenv("STRIPE_WEBHOOK_SECRET", "")
+            )
+        except ValueError as e:
+            logger.error("Invalid payload")
+            raise HTTPException(status_code=400, detail="Invalid payload")
+        except stripe.error.SignatureVerificationError as e:
+            logger.error("Invalid signature")
+            raise HTTPException(status_code=400, detail="Invalid signature")
+        
+        if event["type"] == "payment_intent.succeeded":
+            payment_intent = event["data"]["object"]
+            logger.info(f"Payment succeeded! Amount: ${payment_intent.amount/100:.2f} USD")
+            logger.info(f"Payment ID: {payment_intent.id}")
+            logger.info(f"Customer: {payment_intent.customer}")
+        
+        return {"status": "success"}
+    except Exception as e:
+        logger.error(f"Webhook error: {str(e)}")
+        logger.exception("Full webhook error:")
+        raise HTTPException(status_code=400, detail=str(e))
+
+# Import admin routes
+from admin import (
+    admin_dashboard,
+    create_customer,
+    sync_customer,
+    view_customer
+)
+
+# Mount admin routes
+app.get("/admin", response_class=HTMLResponse)(admin_dashboard)
+app.post("/admin/customer/create")(create_customer)
+app.post("/admin/customer/{customer_id}/sync")(sync_customer)
+app.get("/admin/customer/{customer_id}")(view_customer)
 
 if __name__ == "__main__":
     import uvicorn
