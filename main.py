@@ -421,6 +421,82 @@ async def dashboard(request: Request, customer_id: int, db: Session = Depends(ge
             content={"error": f"Internal server error: {str(e)}"}
         )
 
+# API endpoints for dashboard data
+@app.get("/api/dashboard/{customer_id}")
+async def dashboard_data(customer_id: int, db: Session = Depends(get_db)):
+    """Get dashboard data for a customer"""
+    try:
+        logger.info(f"Getting dashboard data for customer {customer_id}")
+        
+        # Get customer
+        customer = db.query(Customer).filter_by(id=customer_id).first()
+        logger.info(f"Found customer: {customer}")
+        
+        if not customer:
+            raise HTTPException(status_code=404, detail="Customer not found")
+
+        # Get API keys
+        api_keys = db.query(APIKey).filter_by(customer_id=customer_id).all()
+        logger.info(f"Found {len(api_keys)} API keys")
+        
+        # Calculate current month usage and cost
+        start_of_month = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        usage_stats = db.query(
+            func.count(Usage.id).label('request_count'),
+            func.coalesce(func.sum(Usage.cost), 0.0).label('total_cost'),
+            func.coalesce(func.sum(Usage.tokens_used), 0).label('total_tokens')
+        ).join(APIKey).filter(
+            APIKey.customer_id == customer_id,
+            Usage.timestamp >= start_of_month
+        ).first()
+        
+        logger.info(f"Usage stats: {usage_stats}")
+        
+        # Get usage data
+        try:
+            billing_service = BillingService(os.getenv("STRIPE_SECRET_KEY"))
+            usage_summary = await billing_service.get_customer_usage_summary(db, customer_id)
+            logger.info(f"Got usage summary: {usage_summary}")
+        except Exception as e:
+            logger.error(f"Error getting usage summary: {str(e)}")
+            usage_summary = {}
+        
+        # Format usage data for chart
+        today = datetime.utcnow()
+        last_30_days = [(today - timedelta(days=x)).strftime('%Y-%m-%d') for x in range(30)]
+        usage_data = [0] * 30  # Initialize with zeros
+        
+        # Convert usage summary to chart data
+        if usage_summary:
+            for i, date in enumerate(last_30_days):
+                usage_data[i] = usage_summary.get(date, 0)
+        
+        return {
+            "customer": {
+                "id": customer.id,
+                "name": customer.name,
+                "email": customer.email,
+                "company": customer.company
+            },
+            "api_keys": [{
+                "id": key.id,
+                "name": key.name,
+                "key": key.key,
+                "rate_limit": key.rate_limit,
+                "is_active": key.is_active,
+                "created_at": key.created_at.strftime("%Y-%m-%d %H:%M:%S") if key.created_at else None
+            } for key in api_keys],
+            "usage_labels": last_30_days,
+            "usage_data": usage_data,
+            "current_month_cost": float(usage_stats.total_cost if usage_stats and usage_stats.total_cost is not None else 0.0),
+            "total_requests": int(usage_stats.request_count if usage_stats and usage_stats.request_count is not None else 0),
+            "total_tokens": int(usage_stats.total_tokens if usage_stats and usage_stats.total_tokens is not None else 0)
+        }
+        
+    except Exception as e:
+        logger.exception(f"Error in dashboard data: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # API endpoints for model usage
 @app.post("/generate")
 async def generate_text(
@@ -612,6 +688,78 @@ async def add_knowledge(
             status_code=500,
             content={"error": str(e)}
         )
+
+# API endpoints for usage metrics
+@app.get("/api/usage/{customer_id}")
+def get_usage_metrics(
+    customer_id: int,
+    timeRange: str,
+    db: Session = Depends(get_db)
+):
+    try:
+        # Validate customer exists
+        customer = db.query(Customer).filter(Customer.id == customer_id).first()
+        if not customer:
+            raise HTTPException(status_code=404, detail="Customer not found")
+
+        # Calculate date range
+        now = datetime.utcnow()
+        if timeRange == "24h":
+            start_date = now - timedelta(days=1)
+        elif timeRange == "7d":
+            start_date = now - timedelta(days=7)
+        elif timeRange == "30d":
+            start_date = now - timedelta(days=30)
+        elif timeRange == "90d":
+            start_date = now - timedelta(days=90)
+        else:
+            raise HTTPException(status_code=400, detail="Invalid time range")
+
+        # Get customer's API keys
+        api_key_ids = [key.id for key in customer.api_keys]
+        
+        # Query usage data
+        usage_data = db.query(
+            func.sum(Usage.tokens_used).label('total_tokens'),
+            func.count().label('total_requests'),
+            func.avg(Usage.response_time).label('average_latency')
+        ).filter(
+            Usage.api_key_id.in_(api_key_ids),
+            Usage.timestamp >= start_date
+        ).first()
+
+        # Get daily usage
+        daily_usage = db.query(
+            func.date(Usage.timestamp).label('date'),
+            func.sum(Usage.tokens_used).label('tokens'),
+            func.count().label('requests')
+        ).filter(
+            Usage.api_key_id.in_(api_key_ids),
+            Usage.timestamp >= start_date
+        ).group_by(
+            func.date(Usage.timestamp)
+        ).all()
+
+        # Format response
+        response = {
+            "total_tokens": usage_data.total_tokens or 0,
+            "total_requests": usage_data.total_requests or 0,
+            "average_latency": usage_data.average_latency or 0,
+            "usage_by_day": [
+                {
+                    "date": day.date.strftime("%Y-%m-%d"),
+                    "tokens": day.tokens,
+                    "requests": day.requests
+                }
+                for day in daily_usage
+            ]
+        }
+
+        return response
+
+    except Exception as e:
+        logging.error(f"Error fetching usage metrics: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Payment management routes
 @app.post("/setup-intent/{customer_id}")

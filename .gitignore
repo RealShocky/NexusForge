@@ -16,28 +16,39 @@ lib64/
 parts/
 sdist/
 var/
-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
 
-# Database files
-*.db
-ai_api.db
-api_usage.db
-
 # Environment variables
-.env
 
-# IDE specific files
+.env.*
+!.env.example
+
+# Database
+
+*.sqlite3
+*.sqlite
+
+# Docker
+.docker/
+.dockerignore
+
+# IDE
 .idea/
 .vscode/
 *.swp
 *.swo
 
-# OS specific files
-.DS_Store
-Thumbs.db
-
 # Logs
 *.log
+logs/
+
+# Archives
+*.7z
+*.zip
+*.tar.gz
+
+# Local development
+.DS_Store
+Thumbs.db
