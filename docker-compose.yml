@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  flows-api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://flows_user:flows_password@db:5432/flows_db
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - .:/app
+      - flows_data:/app/data
+    depends_on:
+      - db
+    networks:
+      - flows_network
+    restart: unless-stopped
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=flows_user
+      - POSTGRES_PASSWORD=flows_password
+      - POSTGRES_DB=flows_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - flows_network
+    restart: unless-stopped
+
+  souperchat-frontend:
+    build: 
+      context: P:/souperchat-playground
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - VITE_API_URL=http://flows-api:8000
+    volumes:
+      - P:/souperchat-playground:/app
+      - /app/node_modules
+    networks:
+      - flows_network
+    depends_on:
+      - flows-api
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  flows_data:
+
+networks:
+  flows_network:
+    driver: bridge
