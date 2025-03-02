@@ -234,7 +234,7 @@ async def create_setup_intent(
         logger.info(f"Current API key (masked): {current_key[:4]}...{current_key[-4:]}")
         
         # Force use of live key for this operation
-        stripe.api_key = "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"
+        stripe.api_key = os.getenv("STRIPE_LIVE_SECRET_KEY")
         logger.info("Switched to live API key for setup intent")
         
         setup_intent = stripe.SetupIntent.create(
