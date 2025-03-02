@@ -12,12 +12,12 @@ def migrate_users():
     """
     Migrate the users table to add customer_id column
     """
-    # Get database connection parameters from environment variables or use defaults
+    # Get database connection parameters from environment variables
     db_host = os.environ.get("POSTGRES_HOST", "db")
     db_port = os.environ.get("POSTGRES_PORT", "5432")
     db_name = os.environ.get("POSTGRES_DB", "flows_db")
-    db_user = os.environ.get("POSTGRES_USER", "flows_user")
-    db_password = os.environ.get("POSTGRES_PASSWORD", "flows_password")
+    db_user = os.environ.get("POSTGRES_USER", "db_user")  # Use generic default
+    db_password = os.environ.get("POSTGRES_PASSWORD", "")  # Empty default password
     
     db_url = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
     logger.info(f"Migrating users table at: {db_url}")

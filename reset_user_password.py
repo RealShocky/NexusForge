@@ -19,12 +19,12 @@ def reset_user_password(username, new_password):
     """
     Reset password for a specific user
     """
-    # Get database connection parameters from environment variables or use defaults
+    # Get database connection parameters from environment variables
     db_host = os.environ.get("POSTGRES_HOST", "db")
     db_port = os.environ.get("POSTGRES_PORT", "5432")
     db_name = os.environ.get("POSTGRES_DB", "flows_db")
-    db_user = os.environ.get("POSTGRES_USER", "flows_user")
-    db_password = os.environ.get("POSTGRES_PASSWORD", "flows_password")
+    db_user = os.environ.get("POSTGRES_USER", "db_user")  # Use generic default
+    db_password = os.environ.get("POSTGRES_PASSWORD", "")  # Empty default password
     
     logger.info(f"Resetting password for user: {username}")
     
@@ -110,12 +110,12 @@ def create_user(username, email, password, role="customer"):
     """
     Create a new user if it doesn't exist
     """
-    # Get database connection parameters from environment variables or use defaults
+    # Get database connection parameters from environment variables
     db_host = os.environ.get("POSTGRES_HOST", "db")
     db_port = os.environ.get("POSTGRES_PORT", "5432")
     db_name = os.environ.get("POSTGRES_DB", "flows_db")
-    db_user = os.environ.get("POSTGRES_USER", "flows_user")
-    db_password = os.environ.get("POSTGRES_PASSWORD", "flows_password")
+    db_user = os.environ.get("POSTGRES_USER", "db_user")  # Use generic default
+    db_password = os.environ.get("POSTGRES_PASSWORD", "")  # Empty default password
     
     logger.info(f"Creating user: {username}")
     
