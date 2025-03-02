@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}AI Models - Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex items-center justify-between mb-8">
+        <h1 class="text-3xl font-bold">AI Models</h1>
+        <div class="flex space-x-4">
+            <a href="/admin/model/add" class="btn btn-primary">Add New Model</a>
+            <a href="/admin" class="btn btn-secondary">Back to Dashboard</a>
+        </div>
+    </div>
+    
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        ID
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Name
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Provider
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Model Type
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        API Model
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Price (per 1K tokens)
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for model in models %}
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ model.id }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">{{ model.name }}</div>
+                        {% if model.description %}
+                        <div class="text-xs text-gray-500">{{ model.description }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ model.provider }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ model.model_type }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ model.model_name }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${{ "%.4f"|format(model.price_per_1k_tokens) }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if model.is_active %}
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                            Active
+                        </span>
+                        {% else %}
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                            Inactive
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div class="flex space-x-2">
+                            <a href="/admin/model/{{ model.id }}/edit" class="text-indigo-600 hover:text-indigo-900">Edit</a>
+                            <a href="/admin/model/{{ model.id }}/toggle" class="text-orange-600 hover:text-orange-900">
+                                {% if model.is_active %}Deactivate{% else %}Activate{% endif %}
+                            </a>
+                            <a href="/admin/model/{{ model.id }}/test" class="text-green-600 hover:text-green-900">Test</a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                
+                {% if not models %}
+                <tr>
+                    <td colspan="8" class="px-6 py-4 text-center text-sm text-gray-500">
+                        No models found. <a href="/admin/model/add" class="text-indigo-600 hover:text-indigo-900">Add a model</a>
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="mt-8 bg-white shadow rounded-lg p-6">
+        <h2 class="text-xl font-semibold mb-4">Environment Configuration</h2>
+        
+        <div class="space-y-4">
+            <div>
+                <h3 class="text-lg font-medium">OpenAI</h3>
+                <div class="mt-2 flex items-center">
+                    <span class="text-sm text-gray-500 mr-2">API Key:</span>
+                    <span class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">
+                        {% if env.openai.api_key %}
+                            {{ env.openai.api_key[:4] }}...{{ env.openai.api_key[-4:] if env.openai.api_key|length > 8 else "" }}
+                        {% else %}
+                            Not configured
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="mt-1 flex items-center">
+                    <span class="text-sm text-gray-500 mr-2">Base URL:</span>
+                    <span class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">
+                        {{ env.openai.base_url or "Default" }}
+                    </span>
+                </div>
+            </div>
+            
+            <div>
+                <h3 class="text-lg font-medium">Anthropic</h3>
+                <div class="mt-2 flex items-center">
+                    <span class="text-sm text-gray-500 mr-2">API Key:</span>
+                    <span class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">
+                        {% if env.anthropic.api_key %}
+                            {{ env.anthropic.api_key[:4] }}...{{ env.anthropic.api_key[-4:] if env.anthropic.api_key|length > 8 else "" }}
+                        {% else %}
+                            Not configured
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="mt-1 flex items-center">
+                    <span class="text-sm text-gray-500 mr-2">Base URL:</span>
+                    <span class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">
+                        {{ env.anthropic.base_url or "Default" }}
+                    </span>
+                </div>
+            </div>
+            
+            <div>
+                <h3 class="text-lg font-medium">Hugging Face</h3>
+                <div class="mt-2 flex items-center">
+                    <span class="text-sm text-gray-500 mr-2">API Key:</span>
+                    <span class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">
+                        {% if env.huggingface.api_key %}
+                            {{ env.huggingface.api_key[:4] }}...{{ env.huggingface.api_key[-4:] if env.huggingface.api_key|length > 8 else "" }}
+                        {% else %}
+                            Not configured
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+            
+            <div>
+                <h3 class="text-lg font-medium">Local Models</h3>
+                <div class="mt-2 flex items-center">
+                    <span class="text-sm text-gray-500 mr-2">Base URL:</span>
+                    <span class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">
+                        {{ env.local.base_url or "Not configured" }}
+                    </span>
+                </div>
+            </div>
+            
+            <div>
+                <h3 class="text-lg font-medium">Ollama</h3>
+                <div class="mt-2 flex items-center">
+                    <span class="text-sm text-gray-500 mr-2">Base URL:</span>
+                    <span class="text-sm font-mono bg-gray-100 px-2 py-1 rounded">
+                        {{ env.ollama.base_url or "Not configured" }}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="pt-4">
+                <a href="/admin/settings" class="btn btn-secondary">Edit Environment Settings</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

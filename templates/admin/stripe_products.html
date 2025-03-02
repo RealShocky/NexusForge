@@ -1,0 +1,92 @@
+{% extends "admin.html" %}
+
+{% block title %}Stripe Products - NexusAI Forge Admin{% endblock %}
+
+{% block admin_content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2">Stripe Products</h1>
+        <a href="/admin/stripe-products/create" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Create New Product
+        </a>
+    </div>
+
+    {% if products %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Products</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>ID</th>
+                            <th>Description</th>
+                            <th>Active</th>
+                            <th>Prices</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                        <tr>
+                            <td>{{ product.name }}</td>
+                            <td><code>{{ product.id }}</code></td>
+                            <td>{{ product.description }}</td>
+                            <td>
+                                {% if product.active %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-danger">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if product.prices.data %}
+                                <span class="badge bg-info">{{ product.prices.data|length }} price(s)</span>
+                                {% else %}
+                                <span class="badge bg-warning">No prices</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="/admin/stripe-products/{{ product.id }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        No products found. <a href="/admin/stripe-products/create">Create your first product</a>.
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Usage Guide</h5>
+        </div>
+        <div class="card-body">
+            <h6>Products & Pricing Structure</h6>
+            <p>Stripe's product and pricing structure is organized as follows:</p>
+            <ul>
+                <li><strong>Products</strong> represent what you sell (e.g., Pro Plan, Starter Plan, API Usage)</li>
+                <li><strong>Prices</strong> define how much and how often the customer pays for a product</li>
+                <li>A product can have multiple prices (e.g., monthly vs yearly billing, or different tiers)</li>
+            </ul>
+            
+            <h6>Types of Prices</h6>
+            <ul>
+                <li><strong>One-time</strong>: A simple one-time charge.</li>
+                <li><strong>Recurring</strong>: Charged on a subscription basis (monthly, yearly).</li>
+                <li><strong>Metered</strong>: Usage-based pricing where you report usage during the billing period.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

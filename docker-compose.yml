@@ -1,21 +1,21 @@
-version: '3.8'
 
 services:
-  flows-api:
+  nexusai-forge:
     build: .
     ports:
       - "8000:8000"
     environment:
       - DATABASE_URL=postgresql://flows_user:flows_password@db:5432/flows_db
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
     volumes:
       - .:/app
-      - flows_data:/app/data
+      - nexusai_data:/app/data
     depends_on:
       - db
     networks:
-      - flows_network
+      - nexusai_network
     restart: unless-stopped
 
   db:
@@ -29,30 +29,13 @@ services:
     ports:
       - "5432:5432"
     networks:
-      - flows_network
-    restart: unless-stopped
-
-  souperchat-frontend:
-    build: 
-      context: P:/souperchat-playground
-      dockerfile: Dockerfile
-    ports:
-      - "8080:8080"
-    environment:
-      - VITE_API_URL=http://flows-api:8000
-    volumes:
-      - P:/souperchat-playground:/app
-      - /app/node_modules
-    networks:
-      - flows_network
-    depends_on:
-      - flows-api
+      - nexusai_network
     restart: unless-stopped
 
 volumes:
   postgres_data:
-  flows_data:
+  nexusai_data:
 
 networks:
-  flows_network:
+  nexusai_network:
     driver: bridge

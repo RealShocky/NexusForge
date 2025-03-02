@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block title %}Pricing - NexusAI Forge{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-12 text-center mb-5">
+            <h1 class="display-4">Simple, Transparent Pricing</h1>
+            <p class="lead">Choose the plan that's right for your business</p>
+        </div>
+    </div>
+
+    <div class="row justify-content-center mb-5">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow">
+                <div class="card-header bg-primary text-white text-center py-3">
+                    <h3 class="mb-0">Starter</h3>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <h2 class="card-price">$49<span class="period">/month</span></h2>
+                        <span>Perfect for small teams and startups</span>
+                    </div>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item"><i class="fas fa-check text-success me-2"></i> 100,000 tokens per month</li>
+                        <li class="list-group-item"><i class="fas fa-check text-success me-2"></i> Access to GPT-3.5 Turbo</li>
+                        <li class="list-group-item"><i class="fas fa-check text-success me-2"></i> 5 API keys</li>
+                        <li class="list-group-item"><i class="fas fa-check text-success me-2"></i> Basic rate limiting</li>
+                        <li class="list-group-item"><i class="fas fa-check text-success me-2"></i> Usage dashboard</li>
+                        <li class="list-group-item"><i class="fas fa-times text-danger me-2"></i> Advanced models</li>
+                        <li class="list-group-item"><i class="fas fa-times text-danger me-2"></i> Priority support</li>
+                    </ul>
+                </div>
+                <div class="card-footer text-center">
+                    {% if current_user %}
+                    <a href="/payment/manage" class="btn btn-primary btn-lg w-100">Subscribe</a>
+                    {% else %}
+                    <a href="/register" class="btn btn-primary btn-lg w-100">Get Started</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow border-primary">
+                <div class="card-header bg-primary text-white text-center py-3">
+                    <h3 class="mb-0">Professional</h3>
+                    <span class="badge bg-warning text-dark position-absolute top-0 end-0 mt-2 me-2">POPULAR</span>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <h2 class="card-price">$199<span class="period">/month</span></h2>
+                        <span>For growing businesses</span>
+                    </div>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item"><i class="fas fa-check text-success me-2"></i> 500,000 tokens per month</li>
+                        <li class="list-group-item"><i class="fas fa-check text-success me-2"></i> Access to GPT-3.5 Turbo & GPT-4</li>
+                        <li class="list-group-item"><i class="fas fa-check text-success me-2"></i> 20 API keys</li>
+                        <li class="list-group-item"><i class="fas fa-check text-success me-2"></i> Advanced rate limiting</li>
+                        <li class="list-group-item"><i class="fas fa-check text-success me-2"></i> Detailed analytics</li>
+                        <li class="list-group-item"><i class="fas fa-check text-success me-2"></i> Email support</li>
+                        <li class="list-group-item"><i class="fas fa-times text-danger me-2"></i> Custom model integration</li>
+                    </ul>
+                </div>
+                <div class="card-footer text-center">
+                    {% if current_user %}
+                    <a href="/payment/manage" class="btn btn-primary btn-lg w-100">Subscribe</a>
+                    {% else %}
+                    <a href="/register" class="btn btn-primary btn-lg w-100">Get Started</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow">
+                <div class="card-header bg-primary text-white text-center py-3">
+                    <h3 class="mb-0">Enterprise</h3>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <h2 class="card-price">Custom<span class="period"></span></h2>
+                        <span>For large organizations</span>
+                    </div>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item"><i class="fas fa-check text-success me-2"></i> Unlimited tokens</li>
+                        <li class="list-group-item"><i class="fas fa-check text-success me-2"></i> Access to all AI models</li>
+                        <li class="list-group-item"><i class="fas fa-check text-success me-2"></i> Unlimited API keys</li>
+                        <li class="list-group-item"><i class="fas fa-check text-success me-2"></i> Custom rate limiting</li>
+                        <li class="list-group-item"><i class="fas fa-check text-success me-2"></i> Advanced analytics & reporting</li>
+                        <li class="list-group-item"><i class="fas fa-check text-success me-2"></i> Custom model integration</li>
+                        <li class="list-group-item"><i class="fas fa-check text-success me-2"></i> 24/7 priority support</li>
+                    </ul>
+                </div>
+                <div class="card-footer text-center">
+                    <a href="/contact" class="btn btn-primary btn-lg w-100">Contact Sales</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-body">
+                    <h3 class="card-title">Pay-As-You-Go Options</h3>
+                    <p>Need more flexibility? All plans can be upgraded with additional tokens at the following rates:</p>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Model</th>
+                                    <th>Price per 1K tokens</th>
+                                    <th>Best for</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>GPT-3.5 Turbo</td>
+                                    <td>$0.002</td>
+                                    <td>Everyday AI tasks, chatbots, content generation</td>
+                                </tr>
+                                <tr>
+                                    <td>GPT-4</td>
+                                    <td>$0.03</td>
+                                    <td>Complex reasoning, advanced content, code generation</td>
+                                </tr>
+                                <tr>
+                                    <td>Claude 2</td>
+                                    <td>$0.011</td>
+                                    <td>Long-form content, detailed analysis, safety-critical applications</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-5">
+        <div class="col-12 text-center">
+            <h2 class="mb-4">Frequently Asked Questions</h2>
+        </div>
+        <div class="col-md-6">
+            <div class="accordion" id="accordionFAQ1">
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingOne">
+                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                            What is a token?
+                        </button>
+                    </h2>
+                    <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#accordionFAQ1">
+                        <div class="accordion-body">
+                            Tokens are the basic units of text that AI models process. In English, a token is approximately 4 characters or 3/4 of a word. For example, the sentence "NexusAI Forge is awesome!" would be about 6 tokens.
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingTwo">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                            Can I upgrade or downgrade my plan?
+                        </button>
+                    </h2>
+                    <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#accordionFAQ1">
+                        <div class="accordion-body">
+                            Yes, you can upgrade or downgrade your plan at any time. Changes will take effect at the start of your next billing cycle.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="accordion" id="accordionFAQ2">
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingThree">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                            Do unused tokens roll over?
+                        </button>
+                    </h2>
+                    <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#accordionFAQ2">
+                        <div class="accordion-body">
+                            No, unused tokens do not roll over to the next month. Each billing cycle starts with a fresh allocation of tokens.
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingFour">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                            Is there a free trial?
+                        </button>
+                    </h2>
+                    <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour" data-bs-parent="#accordionFAQ2">
+                        <div class="accordion-body">
+                            Yes, we offer a 14-day free trial with 10,000 tokens to test our service. No credit card required to start.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-5">
+        <div class="col-12 text-center">
+            <h2 class="mb-4">Ready to transform your business with AI?</h2>
+            <a href="/register" class="btn btn-primary btn-lg me-3">Sign Up Now</a>
+            <a href="/contact" class="btn btn-outline-primary btn-lg">Contact Sales</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

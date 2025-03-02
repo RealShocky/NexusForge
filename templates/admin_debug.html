@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Debug Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-8">Admin Debug Dashboard</h1>
+    
+    <div class="bg-white shadow rounded-lg p-6 mb-8">
+        <h2 class="text-xl font-semibold mb-4">Stats</h2>
+        <p>Total API Keys: {{ total_api_keys }}</p>
+        <p>Total Users: {{ total_users }}</p>
+        <p>Logged in as: {{ user.username }}</p>
+    </div>
+</div>
+{% endblock %}

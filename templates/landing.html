@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}NexusAI Forge - AI API Management Platform{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/css/landing.css">
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container">
+        <h1 class="hero-heading">Enterprise AI API Management</h1>
+        <p class="hero-subheading">Securely manage, monitor, and optimize your AI API usage with built-in billing, rate limiting, and usage analytics.</p>
+        <div class="d-flex justify-content-center gap-3">
+            <a href="/register" class="btn btn-primary btn-lg">Get Started</a>
+            <a href="#features" class="btn btn-outline-light btn-lg">Learn More</a>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section id="features" class="py-5 section-dark">
+    <div class="container py-4">
+        <h2 class="section-heading">Key Features</h2>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-key text-white fs-4"></i>
+                    </div>
+                    <h3 class="fs-4 fw-semibold mb-3">Secure API Key Management</h3>
+                    <p>Create, revoke, and manage API keys with granular permissions. Control which models and features each key can access.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-line text-white fs-4"></i>
+                    </div>
+                    <h3 class="fs-4 fw-semibold mb-3">Usage Analytics</h3>
+                    <p>Track token usage, response times, and costs across different models. Generate detailed reports for billing and optimization.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-credit-card text-white fs-4"></i>
+                    </div>
+                    <h3 class="fs-4 fw-semibold mb-3">Integrated Billing</h3>
+                    <p>Set up usage-based billing or fixed plans. Automatically charge customers based on their API consumption.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Pricing Section -->
+<section id="pricing" class="py-5 section-light">
+    <div class="container py-4">
+        <h2 class="section-heading">Flexible Pricing</h2>
+        <div class="row g-4">
+            {% if products %}
+                {% for product in products %}
+                <div class="col-md-4">
+                    <div class="pricing-card">
+                        <div class="pricing-header">
+                            <h3 class="pricing-title">{{ product.name }}</h3>
+                            <p class="pricing-price">{{ product.price_display }}<span class="fs-6 fw-normal">{{ product.price_interval }}</span></p>
+                        </div>
+                        <div class="pricing-features">
+                            <ul>
+                                {% for feature in product.features %}
+                                    <li>{{ feature }}</li>
+                                {% endfor %}
+                            </ul>
+                            {% if product.is_enterprise %}
+                                <a href="/contact" class="btn btn-outline-primary w-100">Contact Us</a>
+                            {% else %}
+                                <a href="/register" class="btn {% if loop.index == 2 %}btn-primary{% else %}btn-outline-primary{% endif %} w-100">Get Started</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <!-- Fallback to static pricing if no products are available -->
+                <div class="col-md-4">
+                    <div class="pricing-card">
+                        <div class="pricing-header">
+                            <h3 class="pricing-title">Starter</h3>
+                            <p class="pricing-price">$49<span class="fs-6 fw-normal">/month</span></p>
+                        </div>
+                        <div class="pricing-features">
+                            <ul>
+                                <li>Up to 5 API keys</li>
+                                <li>1M tokens per month</li>
+                                <li>Basic analytics</li>
+                                <li>Email support</li>
+                            </ul>
+                            <a href="/register" class="btn btn-outline-primary w-100">Get Started</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="pricing-card">
+                        <div class="pricing-header">
+                            <h3 class="pricing-title">Professional</h3>
+                            <p class="pricing-price">$199<span class="fs-6 fw-normal">/month</span></p>
+                        </div>
+                        <div class="pricing-features">
+                            <ul>
+                                <li>Up to 20 API keys</li>
+                                <li>10M tokens per month</li>
+                                <li>Advanced analytics</li>
+                                <li>Priority support</li>
+                                <li>Custom rate limiting</li>
+                            </ul>
+                            <a href="/register" class="btn btn-primary w-100">Get Started</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="pricing-card">
+                        <div class="pricing-header">
+                            <h3 class="pricing-title">Enterprise</h3>
+                            <p class="pricing-price">Custom</p>
+                        </div>
+                        <div class="pricing-features">
+                            <ul>
+                                <li>Unlimited API keys</li>
+                                <li>Custom token limits</li>
+                                <li>Custom analytics</li>
+                                <li>Dedicated support</li>
+                                <li>SSO integration</li>
+                                <li>On-premises deployment</li>
+                            </ul>
+                            <a href="/contact" class="btn btn-outline-primary w-100">Contact Us</a>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<!-- Contact Section -->
+<section id="contact" class="py-5 section-dark">
+    <div class="container py-4">
+        <h2 class="section-heading">Get in Touch</h2>
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="contact-form">
+                    <form action="/contact" method="POST">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="name" name="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="company" class="form-label">Company</label>
+                            <input type="text" class="form-control" id="company" name="company">
+                        </div>
+                        <div class="mb-3">
+                            <label for="message" class="form-label">Message</label>
+                            <textarea class="form-control" id="message" name="message" rows="5" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Send Message</button>
+                    </form>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="ps-lg-4">
+                    <h3 class="fs-4 fw-semibold mb-4">Why Choose NexusAI Forge?</h3>
+                    <p class="mb-4">We provide enterprise-grade solutions for managing AI API access, usage, and billing. Our platform helps you scale your AI operations without the headache of building infrastructure from scratch.</p>
+                    
+                    <h4 class="fs-5 fw-semibold mb-3">Contact Information</h4>
+                    <ul class="list-unstyled mb-4">
+                        <li class="mb-2"><i class="fas fa-envelope me-2"></i> support@nexusaiforge.com</li>
+                        <li class="mb-2"><i class="fas fa-phone me-2"></i> +1 (555) 123-4567</li>
+                        <li><i class="fas fa-map-marker-alt me-2"></i> 123 AI Avenue, San Francisco, CA 94103</li>
+                    </ul>
+                    
+                    <div class="d-flex gap-3">
+                        <a href="#" class="btn btn-outline-light"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="btn btn-outline-light"><i class="fab fa-linkedin"></i></a>
+                        <a href="#" class="btn btn-outline-light"><i class="fab fa-github"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

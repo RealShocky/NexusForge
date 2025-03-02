@@ -1,0 +1,146 @@
+{% extends "admin.html" %}
+
+{% block title %}Add Price to {{ product.name }} - NexusAI Forge Admin{% endblock %}
+
+{% block admin_content %}
+<div class="admin-header">
+    <h1>Add Price to "{{ product.name }}"</h1>
+    <a href="/admin/stripe-product/{{ product.id }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Product
+    </a>
+</div>
+
+{% if error %}
+<div class="alert alert-danger">
+    <i class="fas fa-exclamation-triangle me-2"></i>{{ error }}
+</div>
+{% endif %}
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Price Details</h5>
+    </div>
+    <div class="card-body">
+        <form method="post" action="{{ request.url.path }}">
+            <div class="mb-3">
+                <label for="nickname" class="form-label">Price Name (Optional)</label>
+                <input type="text" class="form-control" id="nickname" name="nickname" 
+                       value="{{ nickname if nickname else '' }}">
+                <div class="form-text">A name to help identify this price, e.g., "Standard Monthly" or "Pay As You Go"</div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="pricing_model" class="form-label">Pricing Model</label>
+                <select class="form-select" id="pricing_model" name="pricing_model" required onchange="togglePricingOptions()">
+                    <option value="">Select pricing model</option>
+                    {% for model in pricing_models %}
+                    <option value="{{ model.id }}" {% if pricing_model == model.id %}selected{% endif %}>{{ model.name }}</option>
+                    {% endfor %}
+                </select>
+                <div class="form-text">How the customer will be charged for this product</div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="unit_amount" class="form-label">Price Amount</label>
+                <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" step="0.01" class="form-control" id="unit_amount" name="unit_amount" 
+                           value="{{ unit_amount if unit_amount else '' }}" required>
+                </div>
+                <div class="form-text">Price in dollars (e.g., 19.99 for $19.99)</div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="currency" class="form-label">Currency</label>
+                <select class="form-select" id="currency" name="currency">
+                    <option value="usd" {% if not currency or currency == 'usd' %}selected{% endif %}>USD ($)</option>
+                    <option value="eur" {% if currency == 'eur' %}selected{% endif %}>EUR (€)</option>
+                    <option value="gbp" {% if currency == 'gbp' %}selected{% endif %}>GBP (£)</option>
+                    <option value="cad" {% if currency == 'cad' %}selected{% endif %}>CAD (C$)</option>
+                </select>
+            </div>
+            
+            <div id="recurring_options" class="d-none">
+                <div class="mb-3">
+                    <label for="billing_period" class="form-label">Billing Period</label>
+                    <select class="form-select" id="billing_period" name="billing_period">
+                        {% for period in billing_periods %}
+                        <option value="{{ period.id }}" {% if billing_period == period.id %}selected{% endif %}>{{ period.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="form-text">How often the customer will be charged</div>
+                </div>
+            </div>
+            
+            <div id="usage_options" class="d-none">
+                <div class="mb-3">
+                    <label for="usage_type" class="form-label">Usage Type</label>
+                    <select class="form-select" id="usage_type" name="usage_type" onchange="toggleAggregationOptions()">
+                        <option value="licensed" {% if usage_type == 'licensed' %}selected{% endif %}>Licensed (fixed quantity)</option>
+                        <option value="metered" {% if usage_type == 'metered' %}selected{% endif %}>Metered (pay-as-you-go)</option>
+                    </select>
+                    <div class="form-text">How usage is calculated</div>
+                </div>
+                
+                <div id="aggregation_options" class="d-none">
+                    <div class="mb-3">
+                        <label for="aggregation_type" class="form-label">Usage Aggregation</label>
+                        <select class="form-select" id="aggregation_type" name="aggregation_type">
+                            <option value="sum" {% if aggregation_type == 'sum' %}selected{% endif %}>Sum (total usage)</option>
+                            <option value="max" {% if aggregation_type == 'max' %}selected{% endif %}>Max (peak usage)</option>
+                            <option value="last_during_period" {% if aggregation_type == 'last_during_period' %}selected{% endif %}>Last (final usage)</option>
+                        </select>
+                        <div class="form-text">How metered usage is calculated during a billing period</div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>For usage-based billing, you'll need to report usage via the Stripe API during the billing cycle.
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-2"></i>Create Price
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+function togglePricingOptions() {
+    const pricingModel = document.getElementById('pricing_model').value;
+    const recurringOptions = document.getElementById('recurring_options');
+    const usageOptions = document.getElementById('usage_options');
+    
+    // Hide all option sections first
+    recurringOptions.classList.add('d-none');
+    usageOptions.classList.add('d-none');
+    
+    // Show relevant sections based on pricing model
+    if (pricingModel === 'recurring') {
+        recurringOptions.classList.remove('d-none');
+    } else if (pricingModel === 'usage') {
+        recurringOptions.classList.remove('d-none');
+        usageOptions.classList.remove('d-none');
+        toggleAggregationOptions();
+    }
+}
+
+function toggleAggregationOptions() {
+    const usageType = document.getElementById('usage_type').value;
+    const aggregationOptions = document.getElementById('aggregation_options');
+    
+    if (usageType === 'metered') {
+        aggregationOptions.classList.remove('d-none');
+    } else {
+        aggregationOptions.classList.add('d-none');
+    }
+}
+
+// Run once on page load
+document.addEventListener('DOMContentLoaded', function() {
+    togglePricingOptions();
+    toggleAggregationOptions();
+});
+</script>
+{% endblock %}

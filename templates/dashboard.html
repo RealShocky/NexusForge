@@ -1,484 +1,412 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI API Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <script src="https://js.stripe.com/v3/"></script>
-</head>
-<body class="bg-gray-100">
-    <nav class="bg-white shadow-lg">
-        <div class="max-w-7xl mx-auto px-4">
-            <div class="flex justify-between h-16">
-                <div class="flex">
-                    <div class="flex-shrink-0 flex items-center">
-                        <h1 class="text-xl font-bold">AI API Dashboard</h1>
-                    </div>
-                </div>
-                <div class="flex items-center">
-                    <span class="text-gray-700">Welcome, {{ customer.name }}</span>
+{% extends "base.html" %}
+
+{% block title %}NexusAI Forge | Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-body">
+                    <h1 class="h2 mb-4">Welcome, {{ user.username }}</h1>
+                    <p class="text-muted">Thank you for using NexusAI Forge. Your developer portal gives you access to all our AI models and tools.</p>
                 </div>
             </div>
         </div>
-    </nav>
-
-    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <!-- API Keys Section -->
-        <div class="bg-white shadow rounded-lg mb-6">
-            <div class="px-4 py-5 sm:p-6">
-                <h2 class="text-lg font-medium mb-4">API Keys</h2>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead>
-                            <tr>
-                                <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                                <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Key</th>
-                                <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate Limit</th>
-                                <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            {% for key in api_keys %}
-                            <tr>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ key.name }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ key.key }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ key.rate_limit }}/min</td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ key.is_active and 'bg-green-100 text-green-800' or 'bg-red-100 text-red-800' }}">
-                                        {{ key.is_active and 'Active' or 'Inactive' }}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    <button onclick="toggleAPIKey('{{ key.id }}')" class="text-indigo-600 hover:text-indigo-900">
-                                        {% if key.is_active %}Deactivate{% else %}Activate{% endif %}
-                                    </button>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-4 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">API Keys</h5>
                 </div>
-                <button onclick="createNewKey()" class="mt-4 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
-                    Create New Key
-                </button>
-            </div>
-        </div>
-
-        <!-- Usage Statistics -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <!-- Usage Chart -->
-            <div class="bg-white shadow rounded-lg">
-                <div class="px-4 py-5 sm:p-6">
-                    <h2 class="text-lg font-medium mb-4">Usage Over Time</h2>
-                    <canvas id="usageChart"></canvas>
-                </div>
-            </div>
-
-            <!-- Cost Summary -->
-            <div class="bg-white shadow rounded-lg">
-                <div class="px-4 py-5 sm:p-6">
-                    <h2 class="text-lg font-medium mb-4">Cost Summary</h2>
-                    <dl class="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                        <div class="px-4 py-5 bg-gray-50 shadow rounded-lg overflow-hidden sm:p-6">
-                            <dt class="text-sm font-medium text-gray-500 truncate">Current Month Usage</dt>
-                            <dd class="mt-1 text-3xl font-semibold text-gray-900">${{ "%.4f"|format(current_month_cost) }}</dd>
-                        </div>
-                        <div class="px-4 py-5 bg-gray-50 shadow rounded-lg overflow-hidden sm:p-6">
-                            <dt class="text-sm font-medium text-gray-500 truncate">Total Requests</dt>
-                            <dd class="mt-1 text-3xl font-semibold text-gray-900">{{ total_requests }}</dd>
-                        </div>
-                    </dl>
+                <div class="card-body d-flex flex-column">
+                    <p class="card-text flex-grow-1">Manage your API keys to access our services programmatically.</p>
+                    <button id="manageKeysBtn" class="btn btn-primary">Manage Keys</button>
                 </div>
             </div>
         </div>
-
-        <!-- Payment Methods -->
-        <div class="bg-white shadow rounded-lg mb-6">
-            <div class="px-4 py-5 sm:p-6">
-                <h2 class="text-lg font-medium mb-4">Payment Methods</h2>
-                <div id="payment-methods-list"></div>
-                <button onclick="showAddPaymentMethod()" class="mt-4 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
-                    Add Payment Method
-                </button>
-                <form id="payment-form" style="display: none;" class="mt-4 space-y-4 max-w-md">
-                    <div id="payment-element" class="p-4 bg-white rounded-lg shadow"></div>
-                    <button type="submit" class="w-full bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                        Save Payment Method
-                    </button>
-                    <div id="payment-message" class="text-sm text-gray-600"></div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Recent Usage -->
-        <div class="bg-white shadow rounded-lg">
-            <div class="px-4 py-5 sm:p-6">
-                <h2 class="text-lg font-medium mb-4">Recent Usage</h2>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead>
-                            <tr>
-                                <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
-                                <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Model</th>
-                                <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tokens</th>
-                                <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cost</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            {% for usage in recent_usage %}
-                            <tr>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ usage.timestamp }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ usage.model.name }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ usage.tokens_used }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${{ "%.4f"|format(usage.cost) }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Usage & Billing</h5>
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <p class="card-text flex-grow-1">Monitor your API usage and manage billing information.</p>
+                    <button id="viewUsageBtn" class="btn btn-primary">View Usage</button>
                 </div>
             </div>
         </div>
-    </main>
-
-    <!-- Payment Modal -->
-    <div id="payment-modal" class="hidden fixed z-10 inset-0 overflow-y-auto" aria-labelledby="payment-modal-label" role="dialog" aria-modal="true">
-        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
-            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                    <div class="sm:flex sm:items-start">
-                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                            <h3 id="payment-modal-label" class="text-lg leading-6 font-medium text-gray-900">Add Payment Method</h3>
-                            <form id="payment-form" class="mt-4">
-                                <div id="card-element" class="p-4 border rounded"></div>
-                                <div class="mt-4 flex justify-end">
-                                    <button type="button" onclick="hidePaymentModal()" class="mr-2 px-4 py-2 text-gray-500 hover:text-gray-700">Cancel</button>
-                                    <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">Add Payment Method</button>
-                                </div>
-                            </form>
-                        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Payment Methods</h5>
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <p class="card-text flex-grow-1">Manage your payment methods and view billing history.</p>
+                    <a href="/payment/manage" class="btn btn-primary">Manage Payments</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-4 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Documentation</h5>
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <p class="card-text flex-grow-1">Explore our comprehensive API documentation.</p>
+                    <a href="/docs" class="btn btn-primary">Read Docs</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Getting Started</h5>
+                </div>
+                <div class="card-body">
+                    <div class="bg-light p-3 rounded">
+                        <pre class="mb-0"><code>// Sample code to use our API
+const apiKey = 'your-api-key';
+const response = await fetch('https://nexusai-forge.com/api/v1/generate', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+        prompt: 'Hello, AI!',
+        model: 'nexus-1'
+    })
+});
+const data = await response.json();
+console.log(data);</code></pre>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
-    <script>
-        // Initialize Stripe globally
-        let stripe;
-        let elements;
-        
-        document.addEventListener('DOMContentLoaded', function() {
-            stripe = Stripe('{{ stripe_public_key }}');
-
-            // Check URL for setup success
-            const urlParams = new URLSearchParams(window.location.search);
-            const setupIntentId = urlParams.get('setup_intent');
-            const redirectStatus = urlParams.get('redirect_status');
-            
-            if (setupIntentId && redirectStatus === 'succeeded') {
-                const messageDiv = document.getElementById('payment-message');
-                messageDiv.textContent = 'Payment method saved successfully!';
-                messageDiv.classList.add('text-green-600');
-                // Remove query parameters
-                window.history.replaceState({}, '', window.location.pathname);
-            }
-            
-            const ctx = document.getElementById('usageChart');
-            if (ctx) {
-                new Chart(ctx.getContext('2d'), {
-                    type: 'line',
-                    data: {
-                        labels: {{ usage_labels | tojson }},
-                        datasets: [{
-                            label: 'API Usage',
-                            data: {{ usage_data | tojson }},
-                            borderColor: 'rgb(75, 192, 192)',
-                            tension: 0.1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        scales: {
-                            y: {
-                                beginAtZero: true
-                            }
-                        }
-                    }
-                });
-            }
-
-            // Initialize payment form
-            const paymentForm = document.getElementById('payment-form');
-            if (paymentForm) {
-                paymentForm.addEventListener('submit', handlePaymentSubmit);
-            }
-
-            // Rest of your JavaScript
-        });
-
-        async function handlePaymentSubmit(e) {
-            e.preventDefault();
-            const button = e.target.querySelector('button[type="submit"]');
-            button.disabled = true;
-
-            try {
-                const { setupIntent, error } = await stripe.confirmSetup({
-                    elements,
-                    confirmParams: {
-                        return_url: window.location.href,
-                    }
-                });
-
-                if (error) {
-                    throw new Error(error.message);
-                }
-
-                // Attach payment method to customer
-                const response = await fetch('/attach-payment-method/1', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        payment_method_id: setupIntent.payment_method,
-                    }),
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to attach payment method');
-                }
-
-                alert('Payment method added successfully');
-                hidePaymentModal();
-                loadPaymentMethods();
-            } catch (error) {
-                console.error('Error:', error);
-                alert(error.message);
-            } finally {
-                button.disabled = false;
-            }
-        }
-
-        async function showAddPaymentMethod() {
-            try {
-                if (!stripe) {
-                    stripe = Stripe('{{ stripe_public_key }}');
-                }
-
-                // Get the setup intent
-                const response = await fetch(`/setup-intent/{{ customer.id }}`, {
-                    method: 'POST',
-                });
-                const data = await response.json();
-
-                // Create payment element
-                elements = stripe.elements();
-                
-                // Use card element instead of payment element for local development
-                const cardElement = elements.create('card', {
-                    style: {
-                        base: {
-                            fontSize: '16px',
-                            color: '#424770',
-                            '::placeholder': {
-                                color: '#aab7c4',
-                            },
-                        },
-                        invalid: {
-                            color: '#9e2146',
-                        },
-                    },
-                });
-
-                // Clear previous payment element if exists
-                const paymentContainer = document.getElementById('payment-element');
-                paymentContainer.innerHTML = '';
-                cardElement.mount('#payment-element');
-
-                // Show the form
-                document.getElementById('payment-form').style.display = 'block';
-
-                // Handle form submission
-                const form = document.getElementById('payment-form');
-                const messageDiv = document.getElementById('payment-message');
-                const submitButton = form.querySelector('button[type="submit"]');
-
-                form.addEventListener('submit', async (event) => {
-                    event.preventDefault();
-                    
-                    // Disable the submit button to prevent multiple clicks
-                    submitButton.disabled = true;
-                    submitButton.textContent = 'Processing...';
-                    messageDiv.textContent = '';
-
-                    try {
-                        const {error, setupIntent} = await stripe.confirmCardSetup(
-                            data.clientSecret,
-                            {
-                                payment_method: {
-                                    card: cardElement
-                                }
-                            }
-                        );
-
-                        if (error) {
-                            messageDiv.textContent = error.message;
-                            messageDiv.classList.add('text-red-600');
-                            submitButton.disabled = false;
-                            submitButton.textContent = 'Save Payment Method';
-                        } else if (setupIntent.status === 'succeeded') {
-                            messageDiv.textContent = 'Payment method saved successfully!';
-                            messageDiv.classList.add('text-green-600');
-                            // Reload page after successful setup
-                            setTimeout(() => window.location.reload(), 1000);
-                        } else {
-                            messageDiv.textContent = 'Unexpected status: ' + setupIntent.status;
-                            messageDiv.classList.add('text-red-600');
-                            submitButton.disabled = false;
-                            submitButton.textContent = 'Save Payment Method';
-                        }
-                    } catch (error) {
-                        messageDiv.textContent = error.message;
-                        messageDiv.classList.add('text-red-600');
-                        submitButton.disabled = false;
-                        submitButton.textContent = 'Save Payment Method';
-                    }
-                });
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error: ' + error.message);
-            }
-        }
-
-        function hidePaymentModal() {
-            document.getElementById('payment-modal').classList.add('hidden');
-            if (elements) {
-                elements = null;
-                const cardElement = document.getElementById('card-element');
-                cardElement.innerHTML = '';
-            }
-        }
-
-        async function loadPaymentMethods() {
-            try {
-                const response = await fetch('/payment-methods/{{ customer.id }}');
-                const data = await response.json();
-                
-                const container = document.getElementById('payment-methods-list');
-                container.innerHTML = '';
-                
-                if (data.payment_methods && data.payment_methods.length > 0) {
-                    const list = document.createElement('ul');
-                    list.className = 'space-y-3';
-                    
-                    data.payment_methods.forEach(method => {
-                        const li = document.createElement('li');
-                        li.className = 'flex justify-between items-center p-3 bg-gray-50 rounded';
-                        li.innerHTML = `
-                            <div>
-                                <span class="font-medium">•••• ${method.card.last4}</span>
-                                <span class="text-gray-500 text-sm ml-2">Expires ${method.card.exp_month}/${method.card.exp_year}</span>
+<!-- Modal for API Keys -->
+<div class="modal fade" id="apiKeysModal" tabindex="-1" aria-labelledby="apiKeysModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="apiKeysModalLabel">API Keys</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="closeApiKeysModal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0">Your API Keys</h6>
+                        <button class="btn btn-sm btn-success" id="showCreateKeyForm">+ Create Key</button>
+                    </div>
+                    <div id="createKeyForm" class="card mb-3 d-none">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="newKeyName" class="form-label">Key Name</label>
+                                <input type="text" class="form-control" id="newKeyName" placeholder="Enter a name for your key">
                             </div>
-                            <button onclick="setDefaultPaymentMethod('${method.id}')" class="text-indigo-600 hover:text-indigo-900">
-                                Set as Default
-                            </button>
-                        `;
-                        list.appendChild(li);
-                    });
-                    container.appendChild(list);
-                } else {
-                    container.innerHTML = '<p class="text-gray-500">No payment methods added yet.</p>';
-                }
-            } catch (error) {
-                console.error('Error loading payment methods:', error);
-            }
-        }
+                            <div class="d-flex justify-content-end">
+                                <button class="btn btn-sm btn-secondary me-2" id="cancelCreateKey">Cancel</button>
+                                <button class="btn btn-sm btn-primary" id="createKeyBtn">Create</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="apiKeysList" class="list-group">
+                        <!-- API keys will be loaded here -->
+                        <div class="text-center p-3 text-muted">Loading API keys...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-        async function setDefaultPaymentMethod(paymentMethodId) {
-            try {
-                const response = await fetch('/setup-automatic-payments/{{ customer.id }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        payment_method_id: paymentMethodId
-                    })
-                });
+<!-- Modal for Usage -->
+<div class="modal fade" id="usageModal" tabindex="-1" aria-labelledby="usageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="usageModalLabel">Usage & Billing</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="closeUsageModal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <h6 class="text-muted mb-2">Total Tokens Used (30 days)</h6>
+                                <h2 class="mb-0" id="totalTokens">0</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <h6 class="text-muted mb-2">Estimated Cost</h6>
+                                <h2 class="mb-0" id="estimatedCost">$0.00</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 
-                if (response.ok) {
-                    alert('Default payment method updated successfully');
-                    loadPaymentMethods();
-                } else {
-                    throw new Error('Failed to update default payment method');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Failed to update default payment method');
-            }
-        }
-
-        async function createNewKey() {
-            const name = prompt('Enter a name for the new API key:');
-            if (name) {
-                try {
-                    const response = await fetch('/api-key', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json'
-                        },
-                        body: JSON.stringify({ 
-                            customer_id: {{ customer.id }},
-                            name: name
-                        })
-                    });
-                    
-                    if (!response.ok) {
-                        const error = await response.json();
-                        console.error('Error response:', error);
-                        alert('Failed to create key: ' + (error.error || 'Unknown error'));
-                        return;
-                    }
-
-                    const result = await response.json();
-                    console.log('Key created:', result);
-                    window.location.reload();
-                } catch (error) {
-                    console.error('Error creating key:', error);
-                    alert('Failed to create key: ' + error.message);
-                }
-            }
-        }
-
-        async function toggleAPIKey(keyId) {
-            try {
-                const response = await fetch(`/api-key/${keyId}/toggle`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="mb-0">Usage Breakdown by Model</h6>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="modelUsageChart" height="200"></canvas>
+                    </div>
+                </div>
                 
-                if (!response.ok) {
-                    const error = await response.json();
-                    console.error('Error response:', error);
-                    alert('Failed to toggle API key: ' + (error.error || 'Unknown error'));
-                    return;
-                }
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">Daily Usage</h6>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="dailyUsageChart" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-                const result = await response.json();
-                console.log('Key toggled:', result);
-                window.location.reload();
-            } catch (error) {
-                console.error('Error toggling key:', error);
-                alert('Failed to toggle key: ' + error.message);
-            }
+{% endblock %}
+
+{% block scripts %}
+<!-- Chart.js for usage graphs -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+
+<script>
+// API Keys Modal Functionality
+const apiKeysModal = new bootstrap.Modal(document.getElementById('apiKeysModal'), {
+    keyboard: false
+});
+
+const usageModal = new bootstrap.Modal(document.getElementById('usageModal'), {
+    keyboard: false
+});
+
+document.getElementById('manageKeysBtn').addEventListener('click', () => {
+    apiKeysModal.show();
+    loadApiKeys();
+});
+
+document.getElementById('viewUsageBtn').addEventListener('click', () => {
+    usageModal.show();
+    loadUsageData();
+});
+
+document.getElementById('closeApiKeysModal').addEventListener('click', () => {
+    apiKeysModal.hide();
+});
+
+document.getElementById('closeUsageModal').addEventListener('click', () => {
+    usageModal.hide();
+});
+
+// API Key form handling
+const showCreateKeyForm = document.getElementById('showCreateKeyForm');
+const createKeyForm = document.getElementById('createKeyForm');
+const cancelCreateKey = document.getElementById('cancelCreateKey');
+const createKeyBtn = document.getElementById('createKeyBtn');
+const newKeyName = document.getElementById('newKeyName');
+
+showCreateKeyForm.addEventListener('click', () => {
+    createKeyForm.classList.remove('d-none');
+    showCreateKeyForm.classList.add('d-none');
+});
+
+cancelCreateKey.addEventListener('click', () => {
+    createKeyForm.classList.add('d-none');
+    showCreateKeyForm.classList.remove('d-none');
+    newKeyName.value = '';
+});
+
+createKeyBtn.addEventListener('click', async () => {
+    if (newKeyName.value.trim() === '') {
+        alert('Please enter a name for your API key');
+        return;
+    }
+    
+    try {
+        const formData = new FormData();
+        formData.append('name', newKeyName.value.trim());
+        formData.append('rate_limit', 60);  // Default rate limit
+        
+        const response = await fetch('/api/keys/create', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            alert(`API Key created! Your key is: ${result.key}\n\nPlease save this key as it won't be shown again.`);
+            newKeyName.value = '';
+            createKeyForm.classList.add('d-none');
+            showCreateKeyForm.classList.remove('d-none');
+            loadApiKeys();
+        } else {
+            const error = await response.json();
+            alert(`Error creating API key: ${error.detail}`);
         }
-    </script>
-</body>
-</html>
+    } catch (error) {
+        alert(`Error creating API key: ${error.message}`);
+    }
+});
+
+// Helper function to copy to clipboard
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        alert('API Key copied to clipboard!');
+    }).catch(err => {
+        console.error('Could not copy text: ', err);
+    });
+}
+
+// Function to delete an API key
+async function deleteApiKey(element, key) {
+    if (!confirm('Are you sure you want to delete this API key? This action cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/keys/${key}`, {
+            method: 'DELETE',
+        });
+        
+        if (response.ok) {
+            element.closest('.list-group-item').remove();
+            alert('API Key deleted successfully');
+        } else {
+            const error = await response.json();
+            alert(`Error deleting API key: ${error.detail}`);
+        }
+    } catch (error) {
+        alert(`Error deleting API key: ${error.message}`);
+    }
+}
+
+// Load existing API keys when the page loads
+async function loadApiKeys() {
+    try {
+        const response = await fetch('/api/keys', {
+            method: 'GET',
+        });
+        
+        if (response.ok) {
+            const keys = await response.json();
+            const keysList = document.getElementById('apiKeysList');
+            
+            if (keys.length === 0) {
+                keysList.innerHTML = '<div class="text-center p-3 text-muted">No API keys found. Create your first key to get started.</div>';
+                return;
+            }
+            
+            let keysHtml = '';
+            keys.forEach(key => {
+                keysHtml += `
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">${key.name}</h6>
+                            <p class="mb-1 text-muted small">Created: ${new Date(key.created_at).toLocaleString()}</p>
+                            <p class="mb-0 small">
+                                <span class="badge bg-${key.is_active ? 'success' : 'danger'}">${key.is_active ? 'Active' : 'Inactive'}</span>
+                                ${key.prefix ? `<span class="text-muted">Prefix: ${key.prefix}...</span>` : ''}
+                            </p>
+                        </div>
+                        <div>
+                            ${key.key ? `<button class="btn btn-sm btn-outline-primary me-2" onclick="copyToClipboard('${key.key}')">Copy</button>` : ''}
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteApiKey(this, '${key.id}')">Delete</button>
+                        </div>
+                    </div>
+                </div>`;
+            });
+            
+            keysList.innerHTML = keysHtml;
+        } else {
+            const error = await response.json();
+            document.getElementById('apiKeysList').innerHTML = `<div class="text-center p-3 text-danger">Error loading API keys: ${error.detail}</div>`;
+        }
+    } catch (error) {
+        document.getElementById('apiKeysList').innerHTML = `<div class="text-center p-3 text-danger">Error loading API keys: ${error.message}</div>`;
+    }
+}
+
+// Load usage data
+async function loadUsageData() {
+    // Placeholder for actual API call
+    // In a real app, you would fetch this data from your backend
+    setTimeout(() => {
+        document.getElementById('totalTokens').textContent = '245,678';
+        document.getElementById('estimatedCost').textContent = '$2.46';
+        
+        // Model usage chart
+        const modelCtx = document.getElementById('modelUsageChart').getContext('2d');
+        new Chart(modelCtx, {
+            type: 'bar',
+            data: {
+                labels: ['GPT-4', 'Claude', 'Llama 2', 'Nexus-1'],
+                datasets: [{
+                    label: 'Tokens Used',
+                    data: [120000, 75000, 35000, 15678],
+                    backgroundColor: [
+                        'rgba(54, 162, 235, 0.5)',
+                        'rgba(255, 99, 132, 0.5)',
+                        'rgba(255, 206, 86, 0.5)',
+                        'rgba(75, 192, 192, 0.5)'
+                    ],
+                    borderColor: [
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+        
+        // Daily usage chart
+        const dailyCtx = document.getElementById('dailyUsageChart').getContext('2d');
+        new Chart(dailyCtx, {
+            type: 'line',
+            data: {
+                labels: ['Mar 1', 'Mar 2', 'Mar 3', 'Mar 4', 'Mar 5', 'Mar 6', 'Mar 7'],
+                datasets: [{
+                    label: 'Daily Tokens',
+                    data: [12000, 19000, 15000, 25000, 22000, 30000, 22678],
+                    fill: false,
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true
+            }
+        });
+    }, 500);
+}
+</script>
+{% endblock %}

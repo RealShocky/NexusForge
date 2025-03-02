@@ -3,80 +3,149 @@
 {% block title %}Admin Dashboard{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <h1 class="text-3xl font-bold mb-8">Admin Dashboard</h1>
-    
-    <!-- Create Customer Form -->
-    <div class="bg-white shadow rounded-lg p-6 mb-8">
-        <h2 class="text-xl font-semibold mb-4">Create New Customer</h2>
-        <form action="/admin/customer/create" method="POST" class="space-y-4">
-            <div>
-                <label for="name" class="block text-sm font-medium text-gray-700">Name</label>
-                <input type="text" name="name" id="name" required
-                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 col-lg-2 d-md-block bg-light sidebar py-4">
+            <div class="position-sticky">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link {% if section == 'dashboard' %}active{% endif %}" href="/admin">
+                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if section == 'customers' %}active{% endif %}" href="/admin/customers">
+                            <i class="fas fa-users me-2"></i>Customers
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if section == 'api_keys' %}active{% endif %}" href="/admin/api-keys">
+                            <i class="fas fa-key me-2"></i>API Keys
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if section == 'models' %}active{% endif %}" href="/admin/models">
+                            <i class="fas fa-brain me-2"></i>AI Models
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if section == 'stripe_products' %}active{% endif %}" href="/admin/stripe-products">
+                            <i class="fas fa-tags me-2"></i>Stripe Products
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if section == 'usage' %}active{% endif %}" href="/admin/usage">
+                            <i class="fas fa-chart-line me-2"></i>Usage Analytics
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if section == 'settings' %}active{% endif %}" href="/admin/settings">
+                            <i class="fas fa-cog me-2"></i>Settings
+                        </a>
+                    </li>
+                </ul>
             </div>
-            <div>
-                <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
-                <input type="email" name="email" id="email" required
-                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-            </div>
-            <div>
-                <label for="company" class="block text-sm font-medium text-gray-700">Company</label>
-                <input type="text" name="company" id="company" required
-                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-            </div>
-            <button type="submit"
-                class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                Create Customer
-            </button>
-        </form>
-    </div>
+        </div>
 
-    <!-- Customers List -->
-    <div class="bg-white shadow rounded-lg overflow-hidden">
-        <div class="px-4 py-5 sm:px-6">
-            <h2 class="text-xl font-semibold">Customers</h2>
-        </div>
-        <div class="border-t border-gray-200">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stripe ID</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    {% for customer in customers %}
-                    <tr>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ customer.id }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ customer.name }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ customer.email }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ customer.company }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {% if customer.stripe_customer_id %}
-                            <span class="text-green-600">{{ customer.stripe_customer_id }}</span>
-                            {% else %}
-                            <span class="text-red-600">Not synced</span>
-                            {% endif %}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <a href="/admin/customer/{{ customer.id }}"
-                                class="text-indigo-600 hover:text-indigo-900 mr-4">View</a>
-                            {% if not customer.stripe_customer_id %}
-                            <form action="/admin/customer/{{ customer.id }}/sync" method="POST" class="inline">
-                                <button type="submit" class="text-green-600 hover:text-green-900">Sync with Stripe</button>
-                            </form>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+        <!-- Main content -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
+            {% block admin_content %}
+            <div class="container">
+                <h1 class="h2 mb-4">Admin Dashboard</h1>
+                
+                <!-- Dashboard Actions -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Dashboard Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="/admin/api-key/create" class="btn btn-success">
+                                <i class="fas fa-plus-circle me-1"></i> Create API Key
+                            </a>
+                            <a href="/admin/model/add" class="btn btn-primary">
+                                <i class="fas fa-plus-circle me-1"></i> Add AI Model
+                            </a>
+                            <a href="/admin/stripe-products" class="btn btn-info">
+                                <i class="fas fa-tags me-1"></i> Manage Products
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Create Customer Form -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Create New Customer</h5>
+                    </div>
+                    <div class="card-body">
+                        <form action="/admin/customer/create" method="POST">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Name</label>
+                                <input type="text" name="name" id="name" required class="form-control">
+                            </div>
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" name="email" id="email" required class="form-control">
+                            </div>
+                            <div class="mb-3">
+                                <label for="company" class="form-label">Company</label>
+                                <input type="text" name="company" id="company" required class="form-control">
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                Create Customer
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Customers List -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Customers</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Company</th>
+                                        <th>Stripe ID</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for customer in customers %}
+                                    <tr>
+                                        <td>{{ customer.id }}</td>
+                                        <td>{{ customer.name }}</td>
+                                        <td>{{ customer.email }}</td>
+                                        <td>{{ customer.company }}</td>
+                                        <td>
+                                            {% if customer.stripe_customer_id %}
+                                            <span class="text-success">{{ customer.stripe_customer_id }}</span>
+                                            {% else %}
+                                            <span class="text-danger">Not synced</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="/admin/customer/{{ customer.id }}"
+                                                class="btn btn-sm btn-outline-primary">Details</a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endblock %}
+        </main>
     </div>
 </div>
 {% endblock %}

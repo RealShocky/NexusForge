@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Features - NexusAI Forge{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-12 text-center mb-5">
+            <h1 class="display-4">NexusAI Forge Features</h1>
+            <p class="lead">Discover the powerful capabilities of our enterprise AI platform</p>
+        </div>
+    </div>
+
+    <div class="row mb-5">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <i class="fas fa-key fa-3x text-primary"></i>
+                    </div>
+                    <h3 class="card-title text-center">API Key Management</h3>
+                    <p class="card-text">Create, manage, and revoke API keys with granular permissions. Control access to your AI resources with ease.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <i class="fas fa-chart-line fa-3x text-primary"></i>
+                    </div>
+                    <h3 class="card-title text-center">Usage Tracking</h3>
+                    <p class="card-text">Monitor your AI usage in real-time with detailed analytics. Track tokens, costs, and usage patterns across all your applications.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <i class="fas fa-shield-alt fa-3x text-primary"></i>
+                    </div>
+                    <h3 class="card-title text-center">Rate Limiting</h3>
+                    <p class="card-text">Protect your resources with configurable rate limits. Set custom thresholds for different API keys and applications.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-5">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <i class="fas fa-robot fa-3x text-primary"></i>
+                    </div>
+                    <h3 class="card-title text-center">Multiple AI Models</h3>
+                    <p class="card-text">Access a variety of AI models through a single unified API. Switch between models without changing your integration.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <i class="fas fa-credit-card fa-3x text-primary"></i>
+                    </div>
+                    <h3 class="card-title text-center">Integrated Billing</h3>
+                    <p class="card-text">Seamless billing integration with Stripe. Pay only for what you use with transparent pricing and detailed invoices.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <i class="fas fa-user-lock fa-3x text-primary"></i>
+                    </div>
+                    <h3 class="card-title text-center">Secure Authentication</h3>
+                    <p class="card-text">Enterprise-grade security with JWT authentication, role-based access control, and secure API endpoints.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-5">
+        <div class="col-12 text-center">
+            <h2 class="mb-4">Ready to get started?</h2>
+            <a href="/register" class="btn btn-primary btn-lg me-3">Sign Up Now</a>
+            <a href="/contact" class="btn btn-outline-primary btn-lg">Contact Sales</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

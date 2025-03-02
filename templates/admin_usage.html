@@ -1,0 +1,194 @@
+{% extends "admin.html" %}
+
+{% block title %}Admin - Usage Analytics{% endblock %}
+
+{% block admin_content %}
+<div class="container">
+    <h1 class="h2 mb-4">Usage Analytics</h1>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Platform Usage Overview</h5>
+        </div>
+        <div class="card-body">
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="stat-card bg-primary text-white p-3 rounded">
+                        <h3 class="stat-number">{{ total_requests | default(0) }}</h3>
+                        <p class="stat-label mb-0">Total API Requests</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card bg-success text-white p-3 rounded">
+                        <h3 class="stat-number">{{ active_customers | default(0) }}</h3>
+                        <p class="stat-label mb-0">Active Customers</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card bg-info text-white p-3 rounded">
+                        <h3 class="stat-number">{{ total_tokens | default(0) }}</h3>
+                        <p class="stat-label mb-0">Total Tokens</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card bg-warning text-white p-3 rounded">
+                        <h3 class="stat-number">${{ total_cost | default('0.00') }}</h3>
+                        <p class="stat-label mb-0">Total Cost</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Daily Requests</h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="dailyRequestsChart" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Model Usage Distribution</h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="modelUsageChart" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Customer Usage</h5>
+            <div class="btn-group">
+                <button type="button" class="btn btn-sm btn-outline-secondary time-filter active" data-range="7">Last 7 Days</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary time-filter" data-range="30">Last 30 Days</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary time-filter" data-range="90">Last 90 Days</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Customer</th>
+                            <th>Requests</th>
+                            <th>Tokens</th>
+                            <th>Cost</th>
+                            <th>Last Active</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for customer in customers %}
+                        <tr>
+                            <td>{{ customer.name }}</td>
+                            <td>{{ customer.requests | default(0) }}</td>
+                            <td>{{ customer.tokens | default(0) }}</td>
+                            <td>${{ customer.cost | default('0.00') }}</td>
+                            <td>{{ customer.last_active | format_datetime }}</td>
+                            <td>
+                                <a href="/admin/customer/{{ customer.id }}/usage" class="btn btn-sm btn-info">
+                                    <i class="fas fa-chart-line"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // This would be populated with actual data from the backend
+    const dummyDailyData = {
+        labels: ['Jan 1', 'Jan 2', 'Jan 3', 'Jan 4', 'Jan 5', 'Jan 6', 'Jan 7'],
+        data: [65, 59, 80, 81, 56, 55, 70]
+    };
+
+    const dummyModelData = {
+        labels: ['GPT-4', 'GPT-3.5', 'Claude', 'LLaMA', 'Mistral'],
+        data: [35, 25, 15, 15, 10]
+    };
+
+    // Daily Requests Chart
+    new Chart(
+        document.getElementById('dailyRequestsChart'),
+        {
+            type: 'line',
+            data: {
+                labels: dummyDailyData.labels,
+                datasets: [{
+                    label: 'API Requests',
+                    data: dummyDailyData.data,
+                    fill: false,
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        }
+    );
+
+    // Model Usage Chart
+    new Chart(
+        document.getElementById('modelUsageChart'),
+        {
+            type: 'doughnut',
+            data: {
+                labels: dummyModelData.labels,
+                datasets: [{
+                    data: dummyModelData.data,
+                    backgroundColor: [
+                        'rgb(255, 99, 132)',
+                        'rgb(54, 162, 235)',
+                        'rgb(255, 205, 86)',
+                        'rgb(75, 192, 192)',
+                        'rgb(153, 102, 255)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true
+            }
+        }
+    );
+
+    // Time Filter Functionality
+    document.querySelectorAll('.time-filter').forEach(button => {
+        button.addEventListener('click', function() {
+            // Remove active class from all buttons
+            document.querySelectorAll('.time-filter').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Add active class to clicked button
+            this.classList.add('active');
+            
+            // Get selected time range
+            const range = this.dataset.range;
+            
+            // Here you would make an API call to get new data based on the selected range
+            console.log(`Fetch data for last ${range} days`);
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}

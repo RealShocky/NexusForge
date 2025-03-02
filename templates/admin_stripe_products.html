@@ -1,0 +1,104 @@
+{% extends "admin.html" %}
+
+{% block title %}Admin - Stripe Products{% endblock %}
+
+{% block admin_content %}
+<div class="container">
+    <h1 class="h2 mb-4">Stripe Products</h1>
+    
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Products & Pricing</h5>
+            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createProductModal">
+                <i class="fas fa-plus me-1"></i> Add Product
+            </button>
+        </div>
+        <div class="card-body">
+            {% if products %}
+            <div class="row">
+                {% for product in products %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">{{ product.name }}</h5>
+                            <span class="badge {% if product.active %}bg-success{% else %}bg-danger{% endif %}">
+                                {% if product.active %}Active{% else %}Inactive{% endif %}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">{{ product.description or 'No description' }}</p>
+                            
+                            {% if product.prices %}
+                            <h6 class="mt-3">Pricing</h6>
+                            <ul class="list-group list-group-flush">
+                                {% for price in product.prices %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        {{ price.unit_amount_decimal|float / 100 }} {{ price.currency.upper() }}
+                                        {% if price.type == 'recurring' %}
+                                        / {{ price.recurring.interval }}
+                                        {% elif price.type == 'one_time' %}
+                                        (one-time)
+                                        {% endif %}
+                                    </div>
+                                    <span class="badge {% if price.active %}bg-success{% else %}bg-danger{% endif %}">
+                                        {% if price.active %}Active{% else %}Inactive{% endif %}
+                                    </span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            <p class="text-muted mt-3">No pricing plans configured</p>
+                            {% endif %}
+                        </div>
+                        <div class="card-footer">
+                            <div class="d-flex justify-content-between">
+                                <a href="/admin/stripe-product/{{ product.id }}" class="btn btn-sm btn-info">
+                                    <i class="fas fa-eye me-1"></i> View
+                                </a>
+                                <a href="/admin/stripe-product/{{ product.id }}/price/add" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-plus me-1"></i> Add Price
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <p class="mb-0">No products found in your Stripe account. Create your first product to get started.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Create Product Modal -->
+<div class="modal fade" id="createProductModal" tabindex="-1" aria-labelledby="createProductModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createProductModalLabel">Create New Product</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="/admin/stripe-product/create" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Product Name</label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

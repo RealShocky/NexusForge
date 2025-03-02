@@ -1,0 +1,323 @@
+{% extends "admin.html" %}
+
+{% block title %}Admin - System Settings{% endblock %}
+
+{% block admin_content %}
+<div class="container">
+    <h1 class="h2 mb-4">System Settings</h1>
+    
+    <div class="row">
+        <div class="col-md-3">
+            <div class="list-group mb-4">
+                <a href="#general" class="list-group-item list-group-item-action active" data-bs-toggle="list">General</a>
+                <a href="#apis" class="list-group-item list-group-item-action" data-bs-toggle="list">API Integrations</a>
+                <a href="#billing" class="list-group-item list-group-item-action" data-bs-toggle="list">Billing & Pricing</a>
+                <a href="#security" class="list-group-item list-group-item-action" data-bs-toggle="list">Security</a>
+                <a href="#email" class="list-group-item list-group-item-action" data-bs-toggle="list">Email Templates</a>
+                <a href="#logging" class="list-group-item list-group-item-action" data-bs-toggle="list">Logging</a>
+            </div>
+        </div>
+        
+        <div class="col-md-9">
+            <div class="tab-content">
+                <!-- General Settings -->
+                <div class="tab-pane fade show active" id="general">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">General Settings</h5>
+                        </div>
+                        <div class="card-body">
+                            <form action="/admin/settings/general" method="post">
+                                <div class="mb-3">
+                                    <label for="app_name" class="form-label">Application Name</label>
+                                    <input type="text" class="form-control" id="app_name" name="app_name" value="{{ settings.app_name }}">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="support_email" class="form-label">Support Email</label>
+                                    <input type="email" class="form-control" id="support_email" name="support_email" value="{{ settings.support_email }}">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="default_model" class="form-label">Default Model</label>
+                                    <select class="form-control" id="default_model" name="default_model">
+                                        {% for model in models %}
+                                        <option value="{{ model.id }}" {% if settings.default_model == model.id %}selected{% endif %}>{{ model.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="registration_enabled" name="registration_enabled" {% if settings.registration_enabled %}checked{% endif %}>
+                                        <label class="form-check-label" for="registration_enabled">Enable New User Registration</label>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- API Integrations Settings -->
+                <div class="tab-pane fade" id="apis">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">API Integrations</h5>
+                        </div>
+                        <div class="card-body">
+                            <form action="/admin/settings/apis" method="post">
+                                <!-- OpenAI Settings -->
+                                <div class="mb-4">
+                                    <h6 class="border-bottom pb-2">OpenAI</h6>
+                                    <div class="mb-3">
+                                        <label for="openai_api_key" class="form-label">API Key</label>
+                                        <div class="input-group">
+                                            <input type="password" class="form-control" id="openai_api_key" name="openai_api_key" value="{{ env.openai.api_key }}">
+                                            <button class="btn btn-outline-secondary toggle-password" type="button" data-target="openai_api_key">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="openai_enabled" name="openai_enabled" {% if env.openai.enabled %}checked{% endif %}>
+                                            <label class="form-check-label" for="openai_enabled">Enable OpenAI Integration</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Anthropic Settings -->
+                                <div class="mb-4">
+                                    <h6 class="border-bottom pb-2">Anthropic</h6>
+                                    <div class="mb-3">
+                                        <label for="anthropic_api_key" class="form-label">API Key</label>
+                                        <div class="input-group">
+                                            <input type="password" class="form-control" id="anthropic_api_key" name="anthropic_api_key" value="{{ env.anthropic.api_key }}">
+                                            <button class="btn btn-outline-secondary toggle-password" type="button" data-target="anthropic_api_key">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="anthropic_enabled" name="anthropic_enabled" {% if env.anthropic.enabled %}checked{% endif %}>
+                                            <label class="form-check-label" for="anthropic_enabled">Enable Anthropic Integration</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Hugging Face Settings -->
+                                <div class="mb-4">
+                                    <h6 class="border-bottom pb-2">Hugging Face</h6>
+                                    <div class="mb-3">
+                                        <label for="huggingface_api_key" class="form-label">API Token</label>
+                                        <div class="input-group">
+                                            <input type="password" class="form-control" id="huggingface_api_key" name="huggingface_api_key" value="{{ env.huggingface.api_key }}">
+                                            <button class="btn btn-outline-secondary toggle-password" type="button" data-target="huggingface_api_key">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="huggingface_enabled" name="huggingface_enabled" {% if env.huggingface.enabled %}checked{% endif %}>
+                                            <label class="form-check-label" for="huggingface_enabled">Enable Hugging Face Integration</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Billing & Pricing Settings -->
+                <div class="tab-pane fade" id="billing">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Billing & Pricing Settings</h5>
+                        </div>
+                        <div class="card-body">
+                            <form action="/admin/settings/billing" method="post">
+                                <div class="mb-3">
+                                    <label for="stripe_public_key" class="form-label">Stripe Public Key</label>
+                                    <input type="text" class="form-control" id="stripe_public_key" name="stripe_public_key" value="{{ settings.stripe_public_key }}">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="stripe_secret_key" class="form-label">Stripe Secret Key</label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control" id="stripe_secret_key" name="stripe_secret_key" value="{{ settings.stripe_secret_key }}">
+                                        <button class="btn btn-outline-secondary toggle-password" type="button" data-target="stripe_secret_key">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="default_currency" class="form-label">Default Currency</label>
+                                    <select class="form-control" id="default_currency" name="default_currency">
+                                        <option value="usd" {% if settings.default_currency == 'usd' %}selected{% endif %}>USD</option>
+                                        <option value="eur" {% if settings.default_currency == 'eur' %}selected{% endif %}>EUR</option>
+                                        <option value="gbp" {% if settings.default_currency == 'gbp' %}selected{% endif %}>GBP</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Model Pricing Markup</label>
+                                    <div class="input-group mb-2">
+                                        <span class="input-group-text">%</span>
+                                        <input type="number" class="form-control" id="markup_percentage" name="markup_percentage" value="{{ settings.markup_percentage|default(20) }}" min="0" max="500">
+                                    </div>
+                                    <small class="text-muted">Percentage added to the base model cost</small>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Security Settings -->
+                <div class="tab-pane fade" id="security">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Security Settings</h5>
+                        </div>
+                        <div class="card-body">
+                            <form action="/admin/settings/security" method="post">
+                                <div class="mb-3">
+                                    <label for="jwt_secret" class="form-label">JWT Secret Key</label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control" id="jwt_secret" name="jwt_secret" value="{{ settings.jwt_secret }}">
+                                        <button class="btn btn-outline-secondary toggle-password" type="button" data-target="jwt_secret">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="token_expiry" class="form-label">API Token Expiry (hours)</label>
+                                    <input type="number" class="form-control" id="token_expiry" name="token_expiry" value="{{ settings.token_expiry|default(24) }}" min="1" max="8760">
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="enable_rate_limiting" name="enable_rate_limiting" {% if settings.enable_rate_limiting %}checked{% endif %}>
+                                        <label class="form-check-label" for="enable_rate_limiting">Enable Rate Limiting</label>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="rate_limit" class="form-label">Default Rate Limit (requests per minute)</label>
+                                    <input type="number" class="form-control" id="rate_limit" name="rate_limit" value="{{ settings.rate_limit|default(60) }}" min="1" max="10000">
+                                </div>
+                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Email Templates Settings -->
+                <div class="tab-pane fade" id="email">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Email Templates</h5>
+                        </div>
+                        <div class="card-body">
+                            <form action="/admin/settings/email" method="post">
+                                <div class="mb-3">
+                                    <label for="smtp_host" class="form-label">SMTP Host</label>
+                                    <input type="text" class="form-control" id="smtp_host" name="smtp_host" value="{{ settings.smtp_host }}">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="smtp_port" class="form-label">SMTP Port</label>
+                                    <input type="number" class="form-control" id="smtp_port" name="smtp_port" value="{{ settings.smtp_port|default(587) }}">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="smtp_username" class="form-label">SMTP Username</label>
+                                    <input type="text" class="form-control" id="smtp_username" name="smtp_username" value="{{ settings.smtp_username }}">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="smtp_password" class="form-label">SMTP Password</label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control" id="smtp_password" name="smtp_password" value="{{ settings.smtp_password }}">
+                                        <button class="btn btn-outline-secondary toggle-password" type="button" data-target="smtp_password">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="smtp_tls" name="smtp_tls" {% if settings.smtp_tls %}checked{% endif %}>
+                                        <label class="form-check-label" for="smtp_tls">Use TLS</label>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Logging Settings -->
+                <div class="tab-pane fade" id="logging">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Logging Configuration</h5>
+                        </div>
+                        <div class="card-body">
+                            <form action="/admin/settings/logging" method="post">
+                                <div class="mb-3">
+                                    <label for="log_level" class="form-label">Log Level</label>
+                                    <select class="form-control" id="log_level" name="log_level">
+                                        <option value="DEBUG" {% if settings.log_level == 'DEBUG' %}selected{% endif %}>DEBUG</option>
+                                        <option value="INFO" {% if settings.log_level == 'INFO' %}selected{% endif %}>INFO</option>
+                                        <option value="WARNING" {% if settings.log_level == 'WARNING' %}selected{% endif %}>WARNING</option>
+                                        <option value="ERROR" {% if settings.log_level == 'ERROR' %}selected{% endif %}>ERROR</option>
+                                        <option value="CRITICAL" {% if settings.log_level == 'CRITICAL' %}selected{% endif %}>CRITICAL</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="log_to_file" name="log_to_file" {% if settings.log_to_file %}checked{% endif %}>
+                                        <label class="form-check-label" for="log_to_file">Log to File</label>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="log_file_path" class="form-label">Log File Path</label>
+                                    <input type="text" class="form-control" id="log_file_path" name="log_file_path" value="{{ settings.log_file_path|default('logs/app.log') }}">
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="log_rotation" name="log_rotation" {% if settings.log_rotation %}checked{% endif %}>
+                                        <label class="form-check-label" for="log_rotation">Enable Log Rotation</label>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    // Toggle password visibility
+    document.querySelectorAll('.toggle-password').forEach(button => {
+        button.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-target');
+            const input = document.getElementById(targetId);
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                this.innerHTML = '<i class="fas fa-eye-slash"></i>';
+            } else {
+                input.type = 'password';
+                this.innerHTML = '<i class="fas fa-eye"></i>';
+            }
+        });
+    });
+    
+    // Enable Bootstrap tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+</script>
+{% endblock %}
+{% endblock %}

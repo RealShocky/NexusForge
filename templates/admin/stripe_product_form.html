@@ -1,0 +1,44 @@
+{% extends "admin.html" %}
+
+{% block title %}{{ "Create" if action == "create" else "Edit" }} Product - NexusAI Forge Admin{% endblock %}
+
+{% block admin_content %}
+<div class="admin-header">
+    <h1>{{ "Create" if action == "create" else "Edit" }} Stripe Product</h1>
+    <a href="/admin/stripe-products" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Products
+    </a>
+</div>
+
+{% if error %}
+<div class="alert alert-danger">
+    <i class="fas fa-exclamation-triangle me-2"></i>{{ error }}
+</div>
+{% endif %}
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Product Details</h5>
+    </div>
+    <div class="card-body">
+        <form method="post" action="{{ request.url.path }}">
+            <div class="mb-3">
+                <label for="name" class="form-label">Product Name</label>
+                <input type="text" class="form-control" id="name" name="name" 
+                       value="{{ form_data.name if form_data else product.name if product else '' }}" required>
+                <div class="form-text">The name of your product (e.g., "Pro Plan", "API Usage")</div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="description" class="form-label">Description</label>
+                <textarea class="form-control" id="description" name="description" rows="3">{{ form_data.description if form_data else product.description if product else '' }}</textarea>
+                <div class="form-text">Optional description of what this product includes</div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-2"></i>{{ "Create" if action == "create" else "Update" }} Product
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

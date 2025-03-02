@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - Flows</title>
+    <title>Admin Dashboard - NexusAI Forge</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -13,7 +13,7 @@
         <aside class="fixed inset-y-0 left-0 bg-white shadow-lg w-64">
             <div class="flex flex-col h-full">
                 <div class="flex items-center justify-center h-16 px-4 bg-indigo-600">
-                    <h1 class="text-xl font-bold text-white">Flows Admin</h1>
+                    <h1 class="text-xl font-bold text-white">NexusAI Forge Admin</h1>
                 </div>
                 <nav class="flex-1 p-4 space-y-2">
                     <a href="#overview" class="flex items-center px-4 py-2 text-gray-700 bg-gray-100 rounded-lg">
@@ -161,17 +161,19 @@
             <section id="models" class="hidden space-y-6 mt-8">
                 <div class="flex justify-between items-center">
                     <h2 class="text-2xl font-bold text-gray-900">Models</h2>
-                    <button onclick="showAddModelModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">
-                        Add Model
-                    </button>
+                    <a href="/admin/models" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">
+                        Manage Models
+                    </a>
                 </div>
                 <div class="bg-white rounded-lg shadow overflow-hidden">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Provider</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">API Base</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
@@ -179,13 +181,25 @@
                             {% for model in models %}
                             <tr>
                                 <td class="px-6 py-4 whitespace-nowrap">{{ model.name }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">{{ model.provider }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap">{{ model.model_type }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap">{{ model.api_base }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">${{ "%.4f"|format(model.price_per_1k_tokens) }} / 1K tokens</td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <button onclick="editModel({{ model.id }})" class="text-indigo-600 hover:text-indigo-900">Edit</button>
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ 'bg-green-100 text-green-800' if model.is_active else 'bg-red-100 text-red-800' }}">
+                                        {{ 'Active' if model.is_active else 'Inactive' }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap space-x-2">
+                                    <a href="/admin/model/{{ model.id }}/edit" class="text-indigo-600 hover:text-indigo-900">Edit</a>
+                                    <a href="/admin/model/{{ model.id }}/test" class="text-green-600 hover:text-green-900">Test</a>
                                 </td>
                             </tr>
                             {% endfor %}
+                            {% if not models %}
+                            <tr>
+                                <td colspan="6" class="px-6 py-4 text-center">No models found</td>
+                            </tr>
+                            {% endif %}
                         </tbody>
                     </table>
                 </div>

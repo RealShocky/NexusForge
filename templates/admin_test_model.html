@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Test Model - Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex items-center justify-between mb-8">
+        <h1 class="text-3xl font-bold">Test Model: {{ model.name }}</h1>
+        <div class="flex space-x-4">
+            <a href="/admin/models" class="btn btn-secondary">Back to Models</a>
+        </div>
+    </div>
+    
+    <div class="bg-white shadow rounded-lg p-6 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+                <h2 class="text-xl font-semibold mb-4">Model Details</h2>
+                <table class="min-w-full">
+                    <tbody class="divide-y divide-gray-200">
+                        <tr>
+                            <td class="py-2 text-sm font-medium text-gray-500">ID</td>
+                            <td class="py-2 text-sm text-gray-900">{{ model.id }}</td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 text-sm font-medium text-gray-500">Name</td>
+                            <td class="py-2 text-sm text-gray-900">{{ model.name }}</td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 text-sm font-medium text-gray-500">Provider</td>
+                            <td class="py-2 text-sm text-gray-900">{{ model.provider }}</td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 text-sm font-medium text-gray-500">Model Type</td>
+                            <td class="py-2 text-sm text-gray-900">{{ model.model_type }}</td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 text-sm font-medium text-gray-500">API Model</td>
+                            <td class="py-2 text-sm text-gray-900">{{ model.model_name }}</td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 text-sm font-medium text-gray-500">Context Length</td>
+                            <td class="py-2 text-sm text-gray-900">{{ model.context_length }}</td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 text-sm font-medium text-gray-500">Price</td>
+                            <td class="py-2 text-sm text-gray-900">${{ "%.4f"|format(model.price_per_1k_tokens) }} per 1K tokens</td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 text-sm font-medium text-gray-500">Status</td>
+                            <td class="py-2 text-sm text-gray-900">
+                                {% if model.is_active %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                    Active
+                                </span>
+                                {% else %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                    Inactive
+                                </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 text-sm font-medium text-gray-500">Custom Base URL</td>
+                            <td class="py-2 text-sm font-mono text-gray-900">{{ model.base_url or "Default" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 text-sm font-medium text-gray-500">Custom API Key</td>
+                            <td class="py-2 text-sm text-gray-900">
+                                {% if model.api_key %}
+                                <span class="font-mono">{{ model.api_key[:4] }}...{{ model.api_key[-4:] if model.api_key|length > 8 else "" }}</span>
+                                {% else %}
+                                Using default
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div>
+                <h2 class="text-xl font-semibold mb-4">Test Generation</h2>
+                
+                {% if error_message %}
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                    <p class="font-bold">Error:</p>
+                    <p>{{ error_message }}</p>
+                </div>
+                {% endif %}
+                
+                <div class="mb-4">
+                    <p class="mb-2 text-gray-700">Run a simple test to verify the model is working correctly.</p>
+                    <div class="bg-gray-100 p-4 rounded-md mb-4">
+                        <p class="text-sm text-gray-600">Test prompt:</p>
+                        <p class="font-mono text-sm mt-1">{{ prompt }}</p>
+                    </div>
+                    
+                    <a href="/admin/model/{{ model.id }}/test?run=true" class="btn btn-primary">Run Test</a>
+                </div>
+                
+                {% if test_results %}
+                <div class="mt-6">
+                    <h3 class="text-lg font-medium mb-2">Results</h3>
+                    
+                    <div class="bg-gray-50 p-4 rounded-md mb-4">
+                        <p class="text-sm text-gray-600">Response:</p>
+                        <div class="font-mono text-sm mt-1 whitespace-pre-wrap">{{ test_results.response }}</div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div class="bg-gray-50 p-3 rounded-md">
+                            <p class="text-gray-600">Tokens Used:</p>
+                            <p class="font-medium">{{ test_results.tokens }}</p>
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded-md">
+                            <p class="text-gray-600">Latency:</p>
+                            <p class="font-medium">{{ test_results.latency }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

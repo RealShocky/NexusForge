@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}NexusAI Forge | Usage & Billing{% endblock %}
+
+{% block content %}
+<div class="bg-gray-900 min-h-screen">
+    <div class="container mx-auto px-4 py-12">
+        <div class="bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
+            <h1 class="text-2xl font-bold text-white mb-4">Usage & Billing</h1>
+            <p class="text-gray-300">Monitor your API usage and manage your billing information.</p>
+        </div>
+        
+        <!-- Current Billing Cycle -->
+        <div class="bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
+            <h2 class="text-xl font-bold text-white mb-4">Current Billing Cycle</h2>
+            <div class="flex flex-col md:flex-row md:justify-between gap-6">
+                <div class="bg-gray-900 rounded-lg p-4 flex-1">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-gray-300">Current Plan</span>
+                        <span class="font-semibold text-white">{{ subscription.plan_name or 'Free Tier' }}</span>
+                    </div>
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-gray-300">Billing Period</span>
+                        <span class="font-semibold text-white">{{ subscription.current_period_start|default('N/A', true)|date }} - {{ subscription.current_period_end|default('N/A', true)|date }}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-300">Next Billing Date</span>
+                        <span class="font-semibold text-white">{{ subscription.current_period_end|default('N/A', true)|date }}</span>
+                    </div>
+                </div>
+                
+                <div class="bg-gray-900 rounded-lg p-4 flex-1">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-gray-300">Current Usage</span>
+                        <span class="font-semibold text-white">${{ usage.current_usage|default('0.00', true) }}</span>
+                    </div>
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-gray-300">Monthly Limit</span>
+                        <span class="font-semibold text-white">${{ subscription.monthly_limit|default('0.00', true) }}</span>
+                    </div>
+                    <div class="mt-2">
+                        <div class="relative pt-1">
+                            <div class="overflow-hidden h-2 text-xs flex rounded bg-gray-700">
+                                <div style="width: {{ usage.percentage|default('0', true) }}%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500"></div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-400 mt-1">
+                            <span>{{ usage.percentage|default('0', true) }}% used</span>
+                            <span>{{ usage.requests|default('0', true) }} requests</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            {% if not subscription or subscription.plan_name == 'Free Tier' %}
+            <div class="mt-6">
+                <a href="/pricing" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded">
+                    Upgrade Plan
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Usage Breakdown -->
+        <div class="bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
+            <h2 class="text-xl font-bold text-white mb-4">Usage Breakdown</h2>
+            
+            {% if usage_breakdown %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-gray-900 rounded-lg">
+                    <thead>
+                        <tr>
+                            <th class="py-3 px-4 text-left text-gray-300 font-bold">Service</th>
+                            <th class="py-3 px-4 text-left text-gray-300 font-bold">Requests</th>
+                            <th class="py-3 px-4 text-left text-gray-300 font-bold">Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in usage_breakdown %}
+                        <tr class="border-t border-gray-700">
+                            <td class="py-3 px-4 text-gray-300">{{ item.service }}</td>
+                            <td class="py-3 px-4 text-gray-300">{{ item.requests }}</td>
+                            <td class="py-3 px-4 text-gray-300">${{ item.cost }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-gray-300">No usage data available for this billing cycle.</p>
+            {% endif %}
+        </div>
+        
+        <!-- Payment Methods -->
+        <div class="bg-gray-800 rounded-lg shadow-lg p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-white">Payment Methods</h2>
+                <button id="addPaymentMethod" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-sm">
+                    Add New
+                </button>
+            </div>
+            
+            {% if payment_methods %}
+            <div class="space-y-4">
+                {% for method in payment_methods %}
+                <div class="bg-gray-900 rounded-lg p-4 flex justify-between items-center">
+                    <div class="flex items-center">
+                        <div class="mr-4">
+                            {% if method.brand == 'visa' %}
+                            <svg class="h-8 w-8" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect width="48" height="48" rx="6" fill="#172B85"/>
+                                <path d="M18.4 30H15L12 18H15.8L17.8 27L21 18H24.2L18.4 30Z" fill="white"/>
+                                <path d="M25 30H28.6L30.6 18H27L25 30Z" fill="white"/>
+                                <path d="M36 18C34.8 18 32.6 18.4 31.4 20.2L32 18H28.6L26 30H29.6L30.8 24.4C31 23.6 31.6 22.8 32.8 22.8C34 22.8 34.4 23.6 34.2 24.4L33 30H36.6L38 23.8C38.2 21.4 37.2 18 36 18Z" fill="white"/>
+                            </svg>
+                            {% elif method.brand == 'mastercard' %}
+                            <svg class="h-8 w-8" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect width="48" height="48" rx="6" fill="#16366F"/>
+                                <path d="M30 16H18V32H30V16Z" fill="#FF5F00"/>
+                                <path d="M19 24C19 20.8 20.5 18 23 16.4C21.5 15.2 19.5 14.5 17.5 14.5C12.8 14.5 9 18.8 9 24C9 29.2 12.8 33.5 17.5 33.5C19.5 33.5 21.5 32.8 23 31.6C20.5 29.9 19 27.2 19 24Z" fill="#EB001B"/>
+                                <path d="M39 24C39 29.2 35.2 33.5 30.5 33.5C28.5 33.5 26.5 32.8 25 31.6C27.5 30 29 27.2 29 24C29 20.8 27.5 18 25 16.4C26.5 15.2 28.5 14.5 30.5 14.5C35.2 14.5 39 18.8 39 24Z" fill="#F79E1B"/>
+                            </svg>
+                            {% else %}
+                            <svg class="h-8 w-8" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect width="48" height="48" rx="6" fill="#333"/>
+                                <path d="M14 19H34V22H14V19Z" fill="white"/>
+                                <path d="M14 24H34V27H14V24Z" fill="white"/>
+                                <path d="M14 29H24V32H14V29Z" fill="white"/>
+                            </svg>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <div class="text-white font-medium">{{ method.brand|capitalize }} •••• {{ method.last4 }}</div>
+                            <div class="text-gray-400 text-sm">Expires {{ method.exp_month }}/{{ method.exp_year }}</div>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2">
+                        {% if method.is_default %}
+                        <span class="bg-green-800 text-green-200 text-xs font-semibold px-2 py-1 rounded">Default</span>
+                        {% else %}
+                        <button onclick="setDefaultPaymentMethod('{{ method.id }}')" class="text-blue-400 hover:text-blue-300 text-sm">
+                            Set Default
+                        </button>
+                        {% endif %}
+                        <button onclick="removePaymentMethod('{{ method.id }}')" class="text-red-500 hover:text-red-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="bg-gray-900 rounded-lg p-6 text-center">
+                <p class="text-gray-300 mb-4">No payment methods on file.</p>
+                <button id="addFirstPaymentMethod" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                    Add Payment Method
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function setDefaultPaymentMethod(methodId) {
+    // This would be implemented to call your backend API
+    alert(`Setting ${methodId} as default payment method`);
+}
+
+function removePaymentMethod(methodId) {
+    // This would be implemented to call your backend API
+    alert(`Removing payment method ${methodId}`);
+}
+
+document.getElementById('addPaymentMethod')?.addEventListener('click', function() {
+    // This would open a modal or redirect to a payment method form
+    alert('Add payment method functionality would open here');
+});
+
+document.getElementById('addFirstPaymentMethod')?.addEventListener('click', function() {
+    // This would open a modal or redirect to a payment method form
+    alert('Add payment method functionality would open here');
+});
+</script>
+{% endblock %}

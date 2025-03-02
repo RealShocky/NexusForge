@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block title %}Customer Details - NexusAI Forge{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/admin">Admin Dashboard</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Customer Details</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Customer Information</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h4>Basic Information</h4>
+                            <table class="table">
+                                <tr>
+                                    <th>ID:</th>
+                                    <td>{{ customer.id }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Name:</th>
+                                    <td>{{ customer.name }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Email:</th>
+                                    <td>{{ customer.email }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Company:</th>
+                                    <td>{{ customer.company }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Created:</th>
+                                    <td>{{ customer.created_at }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h4>Stripe Information</h4>
+                            {% if stripe_details %}
+                                <table class="table">
+                                    <tr>
+                                        <th>Stripe ID:</th>
+                                        <td>{{ stripe_details.id }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Name:</th>
+                                        <td>{{ stripe_details.name }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Email:</th>
+                                        <td>{{ stripe_details.email }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Created:</th>
+                                        <td>{{ stripe_details.created }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Default Source:</th>
+                                        <td>{{ stripe_details.default_source or 'None' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Invoice Prefix:</th>
+                                        <td>{{ stripe_details.invoice_prefix }}</td>
+                                    </tr>
+                                </table>
+                            {% elif customer.stripe_customer_id %}
+                                <div class="alert alert-warning">
+                                    <p>Error retrieving Stripe details: {{ stripe_details.error }}</p>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info">
+                                    <p>No Stripe customer associated with this account.</p>
+                                    <a href="/admin/customer/{{ customer.id }}/sync" class="btn btn-primary mt-2">Create Stripe Customer</a>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">API Keys</h3>
+                    <a href="/api-key/create/{{ customer.id }}" class="btn btn-light">Create API Key</a>
+                </div>
+                <div class="card-body">
+                    {% if api_keys %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Key</th>
+                                        <th>Rate Limit</th>
+                                        <th>Status</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for key in api_keys %}
+                                        <tr>
+                                            <td>{{ key.name }}</td>
+                                            <td><code>{{ key.key }}</code></td>
+                                            <td>{{ key.rate_limit }} req/min</td>
+                                            <td>
+                                                {% if key.is_active %}
+                                                    <span class="badge bg-success">Active</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">Inactive</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ key.created_at }}</td>
+                                            <td>
+                                                <div class="btn-group">
+                                                    <a href="/api-key/{{ key.id }}/edit" class="btn btn-sm btn-outline-primary">Edit</a>
+                                                    {% if key.is_active %}
+                                                        <a href="/api-key/{{ key.id }}/deactivate" class="btn btn-sm btn-outline-danger">Deactivate</a>
+                                                    {% else %}
+                                                        <a href="/api-key/{{ key.id }}/activate" class="btn btn-sm btn-outline-success">Activate</a>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <p>No API keys found for this customer.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Usage Statistics</h3>
+                </div>
+                <div class="card-body">
+                    {% if usage_data %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h4>Usage Summary</h4>
+                                <table class="table">
+                                    <tr>
+                                        <th>Total Tokens:</th>
+                                        <td>{{ usage_data.total_tokens }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Total Cost:</th>
+                                        <td>${{ usage_data.total_cost }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Total Requests:</th>
+                                        <td>{{ usage_data.total_requests }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h4>Usage By Model</h4>
+                                <canvas id="modelUsageChart" width="400" height="200"></canvas>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <p>No usage data available for this customer.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between">
+                <a href="/admin" class="btn btn-secondary">Back to Admin Dashboard</a>
+                <div>
+                    <a href="/admin/customer/{{ customer.id }}/edit" class="btn btn-primary">Edit Customer</a>
+                    <a href="/dashboard/{{ customer.id }}" class="btn btn-success">View Dashboard</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if usage_data %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Model usage chart
+    const modelUsageCtx = document.getElementById('modelUsageChart').getContext('2d');
+    const modelUsageChart = new Chart(modelUsageCtx, {
+        type: 'pie',
+        data: {
+            labels: {{ usage_data.model_usage|map(attribute='name')|list|tojson }},
+            datasets: [{
+                data: {{ usage_data.model_usage|map(attribute='tokens')|list|tojson }},
+                backgroundColor: [
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(255, 99, 132, 0.8)',
+                    'rgba(255, 206, 86, 0.8)',
+                    'rgba(75, 192, 192, 0.8)',
+                    'rgba(153, 102, 255, 0.8)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'right',
+                }
+            }
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

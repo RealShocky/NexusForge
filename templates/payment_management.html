@@ -1,0 +1,520 @@
+{% extends "base.html" %}
+
+{% block title %}Payment Management - NexusAI Forge{% endblock %}
+
+{% block head %}
+<style>
+    .hidden {
+        display: none;
+    }
+    
+    #payment-element {
+        margin-bottom: 24px;
+        min-height: 120px;
+    }
+    
+    #payment-element.show {
+        display: block;
+    }
+    
+    #payment-message {
+        color: rgb(105, 115, 134);
+        font-size: 16px;
+        line-height: 20px;
+        padding-top: 12px;
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <h1 class="mb-4">Payment Management</h1>
+            
+            <!-- Payment Methods Section -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Payment Methods</h5>
+                </div>
+                <div class="card-body">
+                    {% if payment_methods %}
+                        <div class="list-group mb-3">
+                        {% for method in payment_methods %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="d-flex align-items-center">
+                                        {% if method.card.brand == 'visa' %}
+                                            <i class="fab fa-cc-visa fa-2x me-2"></i>
+                                        {% elif method.card.brand == 'mastercard' %}
+                                            <i class="fab fa-cc-mastercard fa-2x me-2"></i>
+                                        {% elif method.card.brand == 'amex' %}
+                                            <i class="fab fa-cc-amex fa-2x me-2"></i>
+                                        {% elif method.card.brand == 'discover' %}
+                                            <i class="fab fa-cc-discover fa-2x me-2"></i>
+                                        {% else %}
+                                            <i class="far fa-credit-card fa-2x me-2"></i>
+                                        {% endif %}
+                                        <div>
+                                            <strong>{{ method.card.brand|title }}</strong> ending in {{ method.card.last4 }}
+                                            <div class="text-muted small">Expires {{ method.card.exp_month }}/{{ method.card.exp_year }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    {% if method.id == default_payment_method_id %}
+                                        <span class="badge bg-success">Default</span>
+                                    {% else %}
+                                        <button class="btn btn-sm btn-outline-primary set-default-btn" data-payment-method-id="{{ method.id }}">Set Default</button>
+                                    {% endif %}
+                                    <button class="btn btn-sm btn-outline-danger delete-payment-btn" data-payment-method-id="{{ method.id }}">Remove</button>
+                                </div>
+                            </div>
+                        {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="alert alert-info">You don't have any payment methods on file.</p>
+                    {% endif %}
+                    
+                    <button id="add-payment-method" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i> Add Payment Method
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Billing History Section -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Billing History</h5>
+                </div>
+                <div class="card-body">
+                    {% if invoices %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Description</th>
+                                        <th>Amount</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for invoice in invoices %}
+                                    <tr>
+                                        <td>{{ invoice.created|format_datetime }}</td>
+                                        <td>{{ invoice.description }}</td>
+                                        <td>${{ invoice.amount|format_currency }}</td>
+                                        <td>
+                                            <span class="badge {% if invoice.status == 'paid' %}bg-success{% elif invoice.status == 'open' %}bg-warning{% else %}bg-danger{% endif %}">
+                                                {{ invoice.status|title }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <a href="{{ invoice.invoice_pdf }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                                <i class="fas fa-download me-1"></i> PDF
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="alert alert-info">You don't have any billing history yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Method Modal -->
+<div class="modal fade" id="paymentMethodModal" tabindex="-1" aria-labelledby="paymentMethodModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="paymentMethodModalLabel">Add Payment Method</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="payment-element" class="p-3 border rounded mb-3"></div>
+                <div id="payment-message" class="hidden mt-3"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button id="submit-payment" type="button" class="btn btn-primary">
+                    <span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true"></span>
+                    Save Payment Method
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+    // Debug info for troubleshooting
+    console.log("Payment management page loaded");
+    console.log("Stripe key from template:", "{{ stripe_publishable_key }}");
+    
+    // Stripe initialization and setup
+    let stripe;
+    let elements;
+    let paymentElement;
+    let clientSecret; // Store the client secret globally
+    const customerId = String("{{ customer_id }}");
+    
+    // Use either the key from the template or a fallback test key for development
+    let stripeKey = "{{ stripe_publishable_key }}";
+    if (!stripeKey || stripeKey === "" || stripeKey === "None") {
+        console.warn("No Stripe key provided by server, using live key instead");
+        // Use the live publishable key directly
+        stripeKey = "pk_live_51QVptKGofCcqDSd5maHTpMW6AIGwyPHf9Vyw0u3u8n6uc3HtKPgP4uoLjY5jYNYugQt9iWks4M3EMrsjEYoxzeLu00mdvXvp8b";
+    }
+    
+    console.log("Using Stripe key:", stripeKey.substring(0, 10) + "...");
+    
+    // Display visible feedback in the page for debugging
+    function showDebugInfo(message, type = 'info') {
+        const debugDiv = document.createElement('div');
+        debugDiv.className = `alert alert-${type === 'error' ? 'danger' : 'info'} mt-3`;
+        debugDiv.textContent = message;
+        
+        // Add to modal if it's open, otherwise add to main content
+        const modalBody = document.querySelector('.modal-body');
+        if (modalBody && modalBody.offsetParent !== null) {
+            modalBody.prepend(debugDiv);
+        } else {
+            const container = document.querySelector('.container');
+            if (container) {
+                container.prepend(debugDiv);
+            }
+        }
+        
+        console.log(`${type.toUpperCase()}: ${message}`);
+    }
+    
+    // Stripe initialization and setup
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log("DOM fully loaded");
+        
+        // Check if we have the necessary data
+        if (!customerId) {
+            showDebugInfo("Customer ID is missing", 'error');
+            return;
+        }
+        
+        // Initialize Stripe
+        if (!stripeKey || stripeKey === "") {
+            showDebugInfo("Error: Stripe publishable key is missing", 'error');
+            return;
+        }
+        
+        try {
+            console.log("Initializing Stripe with key:", stripeKey);
+            stripe = Stripe(stripeKey);
+            console.log("Stripe initialized successfully");
+        } catch (error) {
+            console.error("Error initializing Stripe:", error);
+            showDebugInfo(`Error initializing Stripe: ${error.message}`, 'error');
+            return;
+        }
+        
+        // Initialize Bootstrap components
+        try {
+            const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+            const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+            
+            // Initialize modal object globally
+            window.paymentModal = new bootstrap.Modal(document.getElementById('paymentMethodModal'));
+            console.log("Bootstrap components initialized");
+        } catch (error) {
+            console.error("Error initializing Bootstrap components:", error);
+            showDebugInfo(`Error initializing Bootstrap components: ${error.message}`, 'error');
+        }
+        
+        // Add payment method button
+        const addPaymentBtn = document.getElementById('add-payment-method');
+        if (addPaymentBtn) {
+            console.log("Adding click event to add payment button");
+            addPaymentBtn.addEventListener('click', setupPaymentElement);
+        } else {
+            console.error("Add payment button not found!");
+        }
+        
+        // Set default payment method
+        document.querySelectorAll('.set-default-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const paymentMethodId = this.getAttribute('data-payment-method-id');
+                setDefaultPaymentMethod(paymentMethodId);
+            });
+        });
+        
+        // Delete payment method
+        document.querySelectorAll('.delete-payment-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const paymentMethodId = this.getAttribute('data-payment-method-id');
+                if (confirm('Are you sure you want to remove this payment method?')) {
+                    deletePaymentMethod(paymentMethodId);
+                }
+            });
+        });
+    });
+    
+    async function setupPaymentElement() {
+        try {
+            console.log("Setting up payment element for customer ID:", customerId);
+            showDebugInfo(`Setting up payment for customer: ${customerId}`);
+            
+            // Show the modal first to give visual feedback
+            window.paymentModal.show();
+            
+            // Update UI to show loading state
+            const paymentElementContainer = document.getElementById('payment-element');
+            paymentElementContainer.innerHTML = '<div class="d-flex justify-content-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+            
+            // Create a SetupIntent
+            console.log("Sending request to create setup intent");
+            const response = await fetch(`/setup-intent/${customerId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            console.log("Setup intent response status:", response.status);
+            
+            if (!response.ok) {
+                const errorData = await response.text();
+                console.error("Setup intent error response:", errorData);
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorData}`);
+            }
+            
+            const data = await response.json();
+            console.log("Setup intent created successfully", data);
+            
+            if (!data.client_secret) {
+                throw new Error("No client secret returned from API");
+            }
+            
+            clientSecret = data.client_secret; // Assign to global variable
+            showDebugInfo("SetupIntent created successfully");
+            
+            // Create Elements instance
+            elements = stripe.elements({
+                clientSecret: clientSecret,
+                appearance: {
+                    theme: 'stripe',
+                    variables: {
+                        colorPrimary: '#0d6efd',
+                    }
+                }
+            });
+            
+            // Clear the loading spinner
+            paymentElementContainer.innerHTML = '';
+            
+            // Create and mount the Card Element
+            console.log("Creating payment element");
+            
+            // Use the CardElement instead of the PaymentElement 
+            const options = {
+                style: {
+                    base: {
+                        fontSize: '16px',
+                        color: '#32325d',
+                        fontFamily: '"Helvetica Neue", Helvetica, sans-serif',
+                        '::placeholder': {
+                            color: '#aab7c4'
+                        }
+                    },
+                    invalid: {
+                        color: '#fa755a',
+                        iconColor: '#fa755a'
+                    }
+                }
+            };
+            
+            // Create the card element directly instead of using the payment element
+            const cardElement = elements.create('card', options);
+            paymentElement = cardElement; // Assign to global variable
+            
+            console.log("Card element created successfully");
+            
+            // Add a small delay before mounting to ensure DOM is ready
+            setTimeout(() => {
+                try {
+                    console.log("Mounting card element");
+                    cardElement.mount('#payment-element');
+                    console.log("Card element mounted successfully");
+                    
+                    // Add a message to confirm visibility
+                    const messageElement = document.createElement('div');
+                    messageElement.className = 'alert alert-info mt-3';
+                    messageElement.textContent = 'Please enter your card details above';
+                    paymentElementContainer.parentNode.insertBefore(messageElement, paymentElementContainer.nextSibling);
+                    
+                } catch (mountError) {
+                    console.error("Error mounting card element:", mountError);
+                    showDebugInfo(`Error mounting card element: ${mountError.message}`, 'error');
+                }
+            }, 100);
+            
+            // Setup submit handler
+            document.getElementById('submit-payment').addEventListener('click', handleSubmit);
+            
+            // Change button text from Processing to Save
+            document.getElementById('submit-payment').innerHTML = '<span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true"></span> Save Payment Method';
+            document.getElementById('submit-payment').disabled = false;
+        } catch (error) {
+            console.error('Error setting up payment element:', error);
+            showDebugInfo(`Error setting up payment element: ${error.message}`, 'error');
+            
+            // Change button text back from Processing
+            const submitButton = document.getElementById('submit-payment');
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true"></span> Save Payment Method';
+            }
+        }
+    }
+    
+    async function handleSubmit() {
+        setLoading(true);
+        
+        try {
+            console.log("Processing payment method submission");
+            
+            // Create a payment method
+            const { setupIntent, error } = await stripe.confirmCardSetup(
+                clientSecret, 
+                {
+                    payment_method: {
+                        card: paymentElement,
+                        billing_details: {
+                            name: 'Customer ' + customerId
+                        }
+                    }
+                }
+            );
+            
+            if (error) {
+                console.error("Error confirming card setup:", error);
+                showDebugInfo(error.message, 'error');
+                setLoading(false);
+                return;
+            }
+            
+            console.log("Setup Intent confirmed successfully:", setupIntent);
+            
+            // The SetupIntent succeeded, now attach the payment method to the customer
+            console.log("Attaching payment method:", setupIntent.payment_method);
+            const response = await fetch(`/api/attach-payment-method/${customerId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    payment_method_id: setupIntent.payment_method
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            showDebugInfo("Payment method added successfully!", "success");
+            
+            // Reload the page after a short delay to show success message
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+            
+        } catch (error) {
+            console.error('Error confirming setup:', error);
+            showDebugInfo(`Error confirming setup: ${error.message}`, 'error');
+            setLoading(false);
+        }
+    }
+    
+    async function setDefaultPaymentMethod(paymentMethodId) {
+        try {
+            const response = await fetch(`/api/set-default-payment-method/${customerId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    payment_method_id: paymentMethodId
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            // Reload the page to show the updated default payment method
+            window.location.reload();
+            
+        } catch (error) {
+            console.error('Error setting default payment method:', error);
+            alert('Failed to set default payment method. Please try again.');
+        }
+    }
+    
+    async function deletePaymentMethod(paymentMethodId) {
+        try {
+            const response = await fetch(`/api/delete-payment-method/${customerId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    payment_method_id: paymentMethodId
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            // Reload the page to show the updated payment methods
+            window.location.reload();
+            
+        } catch (error) {
+            console.error('Error deleting payment method:', error);
+            alert('Failed to delete payment method. Please try again.');
+        }
+    }
+    
+    function setLoading(isLoading) {
+        const submitButton = document.getElementById('submit-payment');
+        const spinner = submitButton.querySelector('.spinner-border');
+        
+        if (isLoading) {
+            submitButton.disabled = true;
+            spinner.classList.remove('d-none');
+            submitButton.querySelector('span:not(.spinner-border)') ? 
+                submitButton.querySelector('span:not(.spinner-border)').textContent = ' Processing...' :
+                submitButton.innerHTML += ' Processing...';
+        } else {
+            submitButton.disabled = false;
+            spinner.classList.add('d-none');
+            submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true"></span> Save Payment Method';
+        }
+    }
+    
+    function showMessage(messageText, type = 'info') {
+        const messageElement = document.getElementById('payment-message');
+        messageElement.classList.remove('hidden', 'alert-success', 'alert-danger', 'alert-info');
+        messageElement.classList.add('alert', type === 'error' ? 'alert-danger' : type === 'success' ? 'alert-success' : 'alert-info');
+        messageElement.textContent = messageText;
+    }
+</script>
+{% endblock %}

@@ -1,4 +1,4 @@
-# AI API Service
+# NexusAI Forge
 
 An enterprise-grade AI API service with built-in API key management, rate limiting, usage tracking, and a beautiful dashboard interface.
 
@@ -48,16 +48,89 @@ An enterprise-grade AI API service with built-in API key management, rate limiti
 
 ## Installation
 
+### Local Development Setup
 
-1. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/RealShocky/NexusForge.git
+   cd NexusForge
+   ```
 
-2. Set up environment variables in `.env`:
-```env
-STRIPE_SECRET_KEY=your_stripe_key
-```
+2. Create a virtual environment:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. Set up environment variables:
+   ```bash
+   cp .env.example .env
+   ```
+   Then edit the `.env` file with your actual configuration values.
+
+5. Initialize the database:
+   ```bash
+   python migrate_database.py
+   ```
+
+6. Run the application:
+   ```bash
+   uvicorn main:app --reload --host 0.0.0.0 --port 8000
+   ```
+
+### Docker Setup
+
+1. Make sure Docker and Docker Compose are installed on your system.
+
+2. Configure environment variables:
+   ```bash
+   cp .env.example .env
+   ```
+   Then edit the `.env` file with your actual configuration values.
+
+3. Build and start the containers:
+   ```bash
+   docker-compose up -d
+   ```
+
+4. Access the application at http://localhost:8000
+
+## Configuration
+
+The application is configured through environment variables defined in the `.env` file:
+
+### Core Settings
+- `DATABASE_URL`: Database connection string (default: SQLite)
+- `HOST` and `PORT`: Host and port for the application
+- `API_KEY`: Master API key for administrative access
+
+### API Settings
+- `OPENAI_API_KEY`: Your OpenAI API key for AI model integration
+- `OPENAI_MODEL`: Default OpenAI model to use
+
+### Stripe Integration
+- `STRIPE_SECRET_KEY`: Your Stripe secret key for payment processing
+- `STRIPE_PUBLISHABLE_KEY`: Your Stripe publishable key for client-side integration
+- `STRIPE_WEBHOOK_SECRET`: Secret for verifying Stripe webhook events
+
+### Application Behavior
+- `LOAD_DEFAULT_MODELS`: Whether to load default models on startup
+- `DEVELOPMENT_MODE`: Enable development mode with additional logging
+
+## API Documentation
+
+Once the application is running, you can access the Swagger documentation at:
+- http://localhost:8000/docs
+- http://localhost:8000/redoc
+
+## Administration
+
+The admin dashboard is available at http://localhost:8000/admin for authorized users.
 
 ## Available Models
 
@@ -201,6 +274,89 @@ The system uses OpenTelemetry for monitoring and includes:
 - Input validation and sanitization
 - Customer isolation
 - Model access control
+
+## Development Environment Setup
+
+### Windows Setup
+1. **Install Visual Studio Build Tools**
+   - Download [Visual Studio Build Tools 2022](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+   - Run the installer
+   - Select "Desktop development with C++"
+   - Complete the installation
+
+2. **Python Setup**
+   - Install Python 3.12 from [python.org](https://www.python.org/downloads/)
+   - Ensure Python is added to PATH during installation
+   - Open Command Prompt as Administrator and run:
+     ```bash
+     python -m pip install --upgrade pip
+     pip install --upgrade setuptools wheel
+     ```
+
+3. **Virtual Environment**
+   ```bash
+   # Create virtual environment
+   python -m venv venv
+   
+   # Activate virtual environment
+   .\venv\Scripts\activate
+   ```
+
+4. **Install Dependencies**
+   ```bash
+   # Update pip and core tools
+   python -m pip install --upgrade pip
+   pip install --upgrade setuptools wheel
+
+   # Install project dependencies
+   pip install -r requirements.txt
+   ```
+
+   If you encounter ChromaDB installation issues:
+   ```bash
+   # Alternative installation method for ChromaDB
+   pip install chromadb --no-cache-dir
+   ```
+
+5. **Environment Variables**
+   Create a `.env` file in the project root:
+   ```env
+   STRIPE_SECRET_KEY=your_stripe_key
+   STRIPE_PUBLIC_KEY=your_public_key
+   ```
+
+### Troubleshooting Common Issues
+
+1. **ChromaDB Installation Errors**
+   - Ensure Visual Studio Build Tools are installed correctly
+   - Try running Command Prompt as Administrator
+   - If issues persist, use the `--no-cache-dir` flag
+
+2. **Missing DLL Errors**
+   - Install Visual C++ Redistributable from [Microsoft](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist)
+   - Restart your system after installation
+
+3. **Python Path Issues**
+   - Verify Python is in PATH: `python --version`
+   - If not found, add Python installation directory to system PATH
+
+### Starting the Server
+
+1. **Activate Virtual Environment**
+   ```bash
+   .\venv\Scripts\activate
+   ```
+
+2. **Run the Server**
+   ```bash
+   python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+   ```
+
+3. **Access the Dashboard**
+   Open your browser and navigate to:
+   ```
+   http://localhost:8000/dashboard
+   ```
 
 ## Development
 

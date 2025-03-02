@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Create API Key - Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex items-center justify-between mb-8">
+        <h1 class="text-3xl font-bold">Create New API Key</h1>
+        <a href="/admin" class="btn btn-primary">Back to Dashboard</a>
+    </div>
+    
+    <div class="bg-white shadow rounded-lg p-6 mb-8">
+        <form action="/admin/api-key/create" method="POST" class="space-y-4">
+            <div>
+                <label for="customer_id" class="block text-sm font-medium text-gray-700">Customer</label>
+                <select name="customer_id" id="customer_id" required
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    {% for customer in customers %}
+                    <option value="{{ customer.id }}">{{ customer.name }} ({{ customer.email }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div>
+                <label for="name" class="block text-sm font-medium text-gray-700">Key Name</label>
+                <input type="text" name="name" id="name" required
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    placeholder="e.g. Production API Key">
+            </div>
+            
+            <div>
+                <label for="rate_limit" class="block text-sm font-medium text-gray-700">Rate Limit (requests per minute)</label>
+                <input type="number" name="rate_limit" id="rate_limit" value="60" required
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+            
+            <div class="pt-4">
+                <button type="submit" class="btn btn-primary">Create API Key</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

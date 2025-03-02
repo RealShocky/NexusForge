@@ -1,0 +1,134 @@
+{% extends "admin.html" %}
+
+{% block title %}{{ product.name }} - Stripe Product - NexusAI Forge Admin{% endblock %}
+
+{% block admin_content %}
+<div class="admin-header">
+    <h1>{{ product.name }}</h1>
+    <div>
+        <a href="/admin/stripe-products" class="btn btn-outline-secondary me-2">
+            <i class="fas fa-arrow-left me-1"></i>Back to Products
+        </a>
+        <a href="/admin/stripe-products/{{ product.id }}/add-price" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i>Add Price
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Product Details</h5>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <tr>
+                        <th>ID</th>
+                        <td><code>{{ product.id }}</code></td>
+                    </tr>
+                    <tr>
+                        <th>Name</th>
+                        <td>{{ product.name }}</td>
+                    </tr>
+                    <tr>
+                        <th>Description</th>
+                        <td>{{ product.description or 'No description' }}</td>
+                    </tr>
+                    <tr>
+                        <th>Active</th>
+                        <td>
+                            {% if product.active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-danger">Inactive</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Created</th>
+                        <td>{{ product.created|timeformat }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between">
+                <h5 class="mb-0">Prices</h5>
+                <a href="/admin/stripe-products/{{ product.id }}/add-price" class="btn btn-sm btn-primary">
+                    <i class="fas fa-plus me-1"></i>Add Price
+                </a>
+            </div>
+            <div class="card-body">
+                {% if prices %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Amount</th>
+                                <th>Currency</th>
+                                <th>Type</th>
+                                <th>Interval</th>
+                                <th>Usage Type</th>
+                                <th>Active</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for price in prices %}
+                            <tr>
+                                <td><code>{{ price.id }}</code></td>
+                                <td>
+                                    {% if price.unit_amount %}
+                                    {{ price.unit_amount / 100 }}
+                                    {% else %}
+                                    Custom
+                                    {% endif %}
+                                </td>
+                                <td>{{ price.currency|upper }}</td>
+                                <td>
+                                    {% if price.type == 'one_time' %}
+                                    One-time
+                                    {% elif price.type == 'recurring' %}
+                                    Recurring
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if price.recurring %}
+                                    {{ price.recurring.interval|capitalize }}
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if price.recurring and price.recurring.usage_type %}
+                                    {{ price.recurring.usage_type|capitalize }}
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if price.active %}
+                                    <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Inactive</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    No prices found for this product yet. <a href="/admin/stripe-products/{{ product.id }}/add-price">Add your first price</a>.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

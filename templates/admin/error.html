@@ -1,0 +1,31 @@
+{% extends "admin.html" %}
+
+{% block title %}Error - NexusAI Forge Admin{% endblock %}
+
+{% block admin_content %}
+<div class="alert alert-danger">
+    <h4 class="alert-heading">Error Encountered</h4>
+    <p>{{ error }}</p>
+    <hr>
+    <p class="mb-0">
+        Please try again or contact technical support if the issue persists.
+        <a href="javascript:history.back()" class="alert-link">Go back</a>
+    </p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Options</h5>
+    </div>
+    <div class="card-body">
+        <div class="d-flex gap-3">
+            <a href="/admin" class="btn btn-primary">
+                <i class="fas fa-home me-2"></i>Back to Dashboard
+            </a>
+            <a href="/admin/stripe-products" class="btn btn-outline-secondary">
+                <i class="fas fa-tags me-2"></i>Products List
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
