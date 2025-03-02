@@ -23,7 +23,8 @@ var/
 # Environment variables
 .env
 .env.*
-!*.env.example
+.env.sample
+.env.backup
 
 # Database
 
