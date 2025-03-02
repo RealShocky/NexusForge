@@ -25,10 +25,10 @@ def reset_admin_password():
     db_user = os.environ.get("POSTGRES_USER", "db_user")
     db_password = os.environ.get("POSTGRES_PASSWORD", "")
     
-    # New admin credentials
-    admin_username = "admin"
-    admin_password = "admin123"
-    admin_email = "admin@nexusai.com"
+    # Get admin credentials from environment variables
+    admin_username = os.environ.get("ADMIN_USERNAME", "admin")
+    admin_password = os.environ.get("ADMIN_PASSWORD", "changeme")
+    admin_email = os.environ.get("ADMIN_EMAIL", "admin@example.com")
     
     logger.info(f"Resetting password for user: {admin_username}")
     
@@ -114,7 +114,7 @@ def reset_admin_password():
         for user in users:
             logger.info(f"  ID: {user[0]}, Username: {user[1]}, Email: {user[2]}, Role: {user[3]}")
         
-        logger.info(f"Admin password reset completed. You can now login with username '{admin_username}' and password '{admin_password}'")
+        logger.info(f"Admin password reset completed. You can now login with username '{admin_username}'")
         
     except Exception as e:
         logger.error(f"Error resetting admin password: {str(e)}")

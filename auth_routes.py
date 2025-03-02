@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Form
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Form, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.security import OAuth2PasswordRequestForm
@@ -6,8 +6,8 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import timedelta
 import os
-import stripe
 import logging
+import stripe
 
 from database import get_db, User, Customer, APIKey, UsageRecord
 from auth import (
@@ -17,6 +17,10 @@ from auth import (
     ACCESS_TOKEN_EXPIRE_MINUTES, UserRole, is_admin_exists,
     get_current_user_from_cookie
 )
+from csrf_protection import verify_csrf_token, get_csrf_token
+from password_policy import validate_password_strength
+from rate_limiter import rate_limiter, check_auth_rate_limit
+from security_logger import SecurityLogger
 
 # Configure templates
 templates = Jinja2Templates(directory=str(os.path.join(os.path.dirname(__file__), "templates")))
@@ -78,21 +82,45 @@ async def landing_page(request: Request, current_user: User = Depends(get_curren
 # Login route
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request, error: Optional[str] = None):
-    return templates.TemplateResponse("login.html", {"request": request, "error": error})
+    return templates.TemplateResponse("login.html", {"request": request, "error": error, "csrf_token": get_csrf_token()})
 
 @router.post("/login", response_class=HTMLResponse)
 async def login_submit(
     request: Request,
     username: str = Form(...),
     password: str = Form(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_csrf_token),
+    client_ip: str = Depends(check_auth_rate_limit)
 ):
     user = authenticate_user(db, username, password)
     if not user:
+        # Record failed login attempt
+        rate_limiter.record_auth_attempt(client_ip, success=False)
+        
+        # Log failed login attempt
+        SecurityLogger.log_login_attempt(
+            username=username, 
+            ip_address=client_ip, 
+            success=False, 
+            user_agent=request.headers.get("user-agent")
+        )
+        
         return templates.TemplateResponse(
             "login.html", 
-            {"request": request, "error": "Incorrect username or password"}
+            {"request": request, "error": "Incorrect username or password", "csrf_token": get_csrf_token()}
         )
+    
+    # Record successful login attempt
+    rate_limiter.record_auth_attempt(client_ip, success=True)
+    
+    # Log successful login
+    SecurityLogger.log_login_attempt(
+        username=username, 
+        ip_address=client_ip, 
+        success=True, 
+        user_agent=request.headers.get("user-agent")
+    )
     
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
@@ -106,6 +134,7 @@ async def login_submit(
         httponly=True, 
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         samesite="lax",
+        secure=True,
         path="/"
     )
     
@@ -113,7 +142,7 @@ async def login_submit(
 
 @router.get("/register", response_class=HTMLResponse)
 async def register_page(request: Request, error: Optional[str] = None):
-    return templates.TemplateResponse("register.html", {"request": request, "error": error})
+    return templates.TemplateResponse("register.html", {"request": request, "error": error, "csrf_token": get_csrf_token()})
 
 @router.post("/register", response_class=HTMLResponse)
 async def register_submit(
@@ -124,19 +153,20 @@ async def register_submit(
     confirm_password: str = Form(...),
     company: str = Form(""),
     terms: bool = Form(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_csrf_token)
 ):
     # Validate form inputs
     if password != confirm_password:
         return templates.TemplateResponse(
             "register.html", 
-            {"request": request, "error": "Passwords do not match"}
+            {"request": request, "error": "Passwords do not match", "csrf_token": get_csrf_token()}
         )
     
     if not terms:
         return templates.TemplateResponse(
             "register.html", 
-            {"request": request, "error": "You must agree to the Terms of Service"}
+            {"request": request, "error": "You must agree to the Terms of Service", "csrf_token": get_csrf_token()}
         )
     
     # Check if username already exists
@@ -144,7 +174,7 @@ async def register_submit(
     if db_user:
         return templates.TemplateResponse(
             "register.html", 
-            {"request": request, "error": "Username already registered"}
+            {"request": request, "error": "Username already registered", "csrf_token": get_csrf_token()}
         )
     
     # Check if email already exists
@@ -152,7 +182,15 @@ async def register_submit(
     if db_email:
         return templates.TemplateResponse(
             "register.html", 
-            {"request": request, "error": "Email already registered"}
+            {"request": request, "error": "Email already registered", "csrf_token": get_csrf_token()}
+        )
+    
+    # Validate password strength
+    is_strong, password_error = validate_password_strength(password)
+    if not is_strong:
+        return templates.TemplateResponse(
+            "register.html", 
+            {"request": request, "error": password_error, "csrf_token": get_csrf_token()}
         )
     
     # Create user
@@ -207,16 +245,28 @@ async def register_submit(
         redirect_url = "/dashboard"
     
     response = RedirectResponse(url=redirect_url, status_code=302)
-    response.set_cookie(key="access_token", value=f"Bearer {access_token}", httponly=True, max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60)
+    response.set_cookie(key="access_token", value=f"Bearer {access_token}", httponly=True, max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60, secure=True)
     
     return response
 
-@router.get("/logout")
-async def logout():
-    response = RedirectResponse(url="/landing")
-    # Delete cookie with same path and domain settings as when it was set
-    response.delete_cookie(key="access_token", path="/")
-    return response
+@router.post("/logout")
+async def logout(request: Request, response: Response):
+    # Clear the access token cookie
+    response.delete_cookie(key="access_token")
+    
+    # Log the logout event
+    user = await get_current_user_from_cookie(request)
+    if user:
+        SecurityLogger.log_security_event(
+            event_type="logout",
+            details={
+                "username": user.username,
+                "ip_address": request.client.host,
+                "user_agent": request.headers.get("user-agent")
+            }
+        )
+    
+    return RedirectResponse(url="/login", status_code=303)
 
 # Dashboard route - protect with authentication
 @router.get("/dashboard", response_class=HTMLResponse)

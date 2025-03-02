@@ -250,7 +250,7 @@ async def create_setup_intent(
         return {"client_secret": setup_intent.client_secret}
     except Exception as e:
         logger.error(f"Error creating SetupIntent: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to create setup intent: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to create setup intent")
 
 @router.get("/payment-confirmation", response_class=HTMLResponse)
 async def payment_confirmation(
@@ -536,7 +536,7 @@ async def test_stripe_keys():
     except Exception as e:
         return {
             "success": False,
-            "message": f"Error with Stripe configuration: {str(e)}",
+            "message": "Error with Stripe configuration. Please check your credentials.",
             "publishable_key": STRIPE_PUBLISHABLE_KEY,
             "secret_key_valid": False
         }

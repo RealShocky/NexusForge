@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm, SecurityScopes
 from datetime import datetime, timedelta
 from sqlalchemy import func
+from csrf_protection import get_csrf_token, verify_csrf_token
 
 from database import get_db, Customer, User, init_db, AIModel, APIKey, Usage
 from auth import (
@@ -32,6 +33,7 @@ import api_routes
 from customers import router as customer_router
 from payment_routes import router as payment_router
 from account_routes import router as account_router
+from security_middleware import add_security_middleware
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -97,50 +99,61 @@ def format_currency(value):
 templates.env.filters["format_datetime"] = format_datetime
 templates.env.filters["format_currency"] = format_currency
 
-# Middleware for security headers
-class AddSecurityHeadersMiddleware:
-    def __init__(self, app):
-        self.app = app
+# Add CSRF token to all templates
+@app.middleware("http")
+async def add_csrf_token_to_response(request: Request, call_next):
+    response = await call_next(request)
+    
+    # Only add CSRF token to HTML responses
+    if response.headers.get("content-type", "").startswith("text/html"):
+        csrf_token = get_csrf_token(request)
+        response.set_cookie(
+            key="csrf_token",
+            value=csrf_token,
+            httponly=True,
+            secure=True,
+            samesite="lax",
+            max_age=1800  # 30 minutes
+        )
+    
+    return response
 
-    async def __call__(self, scope, receive, send):
-        if scope["type"] != "http":
-            return await self.app(scope, receive, send)
-            
-        async def send_wrapper(response):
-            if response.get("type") == "http.response.start":
-                headers = dict(response.get("headers", []))
-                headers[b"X-Content-Type-Options"] = b"nosniff"
-                headers[b"X-Frame-Options"] = b"DENY"
-                headers[b"X-XSS-Protection"] = b"1; mode=block"
-                headers[b"Strict-Transport-Security"] = b"max-age=31536000; includeSubDomains"
-                # Updated CSP to allow all necessary external resources
-                csp = (
-                    "default-src 'self'; "
-                    "script-src 'self' 'unsafe-inline' https://js.stripe.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.tailwindcss.com; "
-                    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
-                    "font-src 'self' 'unsafe-inline' data: https://fonts.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://*.stripe.com; "
-                    "img-src 'self' data: https:; "
-                    "connect-src 'self' https://api.stripe.com; "
-                    "frame-src 'self' https://js.stripe.com https://*.stripe.com https://*.stripe.network; "
-                    "child-src 'self' https://js.stripe.com https://*.stripe.com https://*.stripe.network;"
-                )
-                headers[b"Content-Security-Policy"] = csp.encode()
-                response["headers"] = [(k, v) for k, v in headers.items()]
-            await send(response)
-            
-        return await self.app(scope, receive, send_wrapper)
+# Add security headers middleware
+app = add_security_middleware(app, 
+    hsts_max_age=31536000,  # 1 year
+    include_subdomains=True,
+    preload=True,
+    csp_directives={
+        "default-src": ["'self'"],
+        "script-src": ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://js.stripe.com"],
+        "style-src": ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+        "img-src": ["'self'", "data:"],
+        "font-src": ["'self'", "https://cdn.jsdelivr.net"],
+        "connect-src": ["'self'", "https://api.stripe.com"],
+        "frame-src": ["'self'", "https://js.stripe.com", "https://hooks.stripe.com"],
+        "object-src": ["'none'"],
+        "base-uri": ["'self'"],
+        "form-action": ["'self'"],
+        "frame-ancestors": ["'none'"],
+        "upgrade-insecure-requests": []
+    }
+)
 
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware, 
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:8000",
+        "https://localhost:8000",
+        "http://127.0.0.1:8000",
+        "https://127.0.0.1:8000",
+        # Add your production domains here
+        # "https://yourdomain.com",
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept"],
 )
-
-# Add security headers middleware
-app.add_middleware(AddSecurityHeadersMiddleware)
 
 # Include routers from other modules
 app.include_router(admin_router)
@@ -459,7 +472,7 @@ async def create_api_key(request: CreateAPIKeyRequest, db: Session = Depends(get
             logging.error(f"Database error creating API key: {str(e)}")
             return JSONResponse(
                 status_code=500,
-                content={"error": "Database error creating API key"}
+                content={"error": "An internal server error occurred while creating the API key."}
             )
         
         return JSONResponse(
@@ -476,7 +489,7 @@ async def create_api_key(request: CreateAPIKeyRequest, db: Session = Depends(get
         logging.error(f"Error creating API key: {str(e)}")
         return JSONResponse(
             status_code=500,
-            content={"error": str(e)}
+            content={"error": "An internal server error occurred while creating the API key."}
         )
 
 @app.post("/api-key/{key_id}/toggle")
@@ -507,7 +520,7 @@ async def toggle_api_key(key_id: int, db: Session = Depends(get_db)):
         logging.error(f"Error toggling API key: {str(e)}")
         return JSONResponse(
             status_code=500,
-            content={"error": str(e)}
+            content={"error": "An internal server error occurred while toggling the API key."}
         )
 
 # User API key management
@@ -557,7 +570,7 @@ async def create_user_api_key(
         }
     except Exception as e:
         logging.error(f"Error creating API key: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error creating API key: {str(e)}")
+        raise HTTPException(status_code=500, detail="An internal server error occurred while creating the API key.")
 
 # Get user API keys
 @app.get("/api/keys", response_model=list)
@@ -597,7 +610,7 @@ async def get_user_api_keys(
         ]
     except Exception as e:
         logging.error(f"Error retrieving API keys: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error retrieving API keys: {str(e)}")
+        raise HTTPException(status_code=500, detail="An internal server error occurred while retrieving API keys.")
 
 # Delete API key
 @app.delete("/api/keys/{key_id}", response_model=dict)
@@ -632,7 +645,7 @@ async def delete_api_key(
         raise
     except Exception as e:
         logging.error(f"Error deleting API key: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error deleting API key: {str(e)}")
+        raise HTTPException(status_code=500, detail="An internal server error occurred while deleting the API key.")
 
 # Customer management
 @app.post("/customers")
@@ -658,7 +671,7 @@ async def create_customer(request: CreateCustomerRequest, db: Session = Depends(
     except Exception as e:
         return JSONResponse(
             status_code=500,
-            content={"error": str(e)}
+            content={"error": "An internal server error occurred while creating the customer."}
         )
 
 # Debug endpoints
@@ -716,7 +729,7 @@ async def add_model(request: ModelRequest, db: Session = Depends(get_db)):
     except Exception as e:
         return JSONResponse(
             status_code=500,
-            content={"error": str(e)}
+            content={"error": "An internal server error occurred while adding the model."}
         )
 
 @app.get("/models")
@@ -744,7 +757,7 @@ async def list_models(db: Session = Depends(get_db)):
     except Exception as e:
         return JSONResponse(
             status_code=500,
-            content={"error": str(e)}
+            content={"error": "An internal server error occurred while listing models."}
         )
 
 # API endpoints for dashboard data
@@ -823,7 +836,7 @@ async def dashboard_data(customer_id: int, db: Session = Depends(get_db)):
         
     except Exception as e:
         logging.exception(f"Error in dashboard data: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="An internal server error occurred while fetching dashboard data.")
 
 # API endpoints for model usage
 @app.post("/generate")
@@ -909,7 +922,7 @@ async def generate_text(
         db.rollback()
         return JSONResponse(
             status_code=500,
-            content={"error": str(e)}
+            content={"error": "An internal server error occurred while generating text."}
         )
 
 @app.post("/query")
@@ -965,7 +978,7 @@ async def query(request: Query, api_key: str = Header(..., alias="X-API-Key"), d
     except Exception as e:
         return JSONResponse(
             status_code=500,
-            content={"error": str(e)}
+            content={"error": "An internal server error occurred while querying."}
         )
 
 @app.post("/add-knowledge")
@@ -1014,7 +1027,7 @@ async def add_knowledge(
     except Exception as e:
         return JSONResponse(
             status_code=500,
-            content={"error": str(e)}
+            content={"error": "An internal server error occurred while adding knowledge."}
         )
 
 # API endpoints for usage metrics
@@ -1087,7 +1100,7 @@ def get_usage_metrics(
 
     except Exception as e:
         logging.error(f"Error fetching usage metrics: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="An internal server error occurred while fetching usage metrics.")
 
 # Payment management routes
 @app.post("/setup-intent/{customer_id}")
@@ -1142,7 +1155,7 @@ async def create_setup_intent(customer_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         logging.error(f"Error creating setup intent: {str(e)}")
         logging.exception("Full setup intent error:")
-        raise HTTPException(status_code=500, detail=f"Failed to create setup intent: {str(e)}")
+        raise HTTPException(status_code=500, detail="An internal server error occurred while creating the setup intent.")
 
 @app.get("/setup-intent")
 async def create_setup_intent_no_customer():
@@ -1161,7 +1174,7 @@ async def create_setup_intent_no_customer():
     except Exception as e:
         logging.error(f"Error creating setup intent: {str(e)}")
         logging.exception("Full setup intent error:")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="An internal server error occurred while creating the setup intent.")
 
 @app.post("/setup-intent/1")  # Match the exact URL being called
 async def create_setup_intent_simple():
@@ -1191,7 +1204,7 @@ async def create_setup_intent_simple():
     except Exception as e:
         logging.error(f"Error creating setup intent: {str(e)}")
         logging.exception("Full setup intent error:")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="An internal server error occurred while creating the setup intent.")
 
 @app.options("/setup-intent/1")
 async def setup_intent_options():
@@ -1235,7 +1248,7 @@ async def get_payment_methods(customer_id: int, db: Session = Depends(get_db)):
         logging.error(f"Error getting payment methods: {e}")
         return JSONResponse(
             status_code=500,
-            content={"error": str(e)}
+            content={"error": "An internal server error occurred while fetching payment methods."}
         )
 
 @app.post("/attach-payment-method/{customer_id}")
@@ -1275,14 +1288,14 @@ async def attach_payment_method(
             logging.error(f"Stripe error attaching payment method: {str(e)}")
             return JSONResponse(
                 status_code=400,
-                content={"error": str(e)}
+                content={"error": "An internal server error occurred while attaching the payment method."}
             )
             
     except Exception as e:
         logging.error(f"Error attaching payment method: {str(e)}")
         return JSONResponse(
             status_code=500,
-            content={"error": "Internal server error"}
+            content={"error": "An internal server error occurred while attaching the payment method."}
         )
 
 @app.get("/payment-history/{customer_id}")
@@ -1293,7 +1306,7 @@ async def get_payment_history(customer_id: int, db: Session = Depends(get_db)):
         history = await billing_service.get_payment_history(db, customer_id)
         return JSONResponse(status_code=200, content={"payments": history.data})
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        return JSONResponse(status_code=500, content={"error": "An internal server error occurred while fetching payment history."})
 
 @app.post("/setup-automatic-payments/{customer_id}")
 async def setup_automatic_payments(customer_id: int, payment_method_id: str = Body(..., embed=True), db: Session = Depends(get_db)):
@@ -1303,7 +1316,7 @@ async def setup_automatic_payments(customer_id: int, payment_method_id: str = Bo
         await billing_service.setup_automatic_payments(db, customer_id, payment_method_id)
         return JSONResponse(status_code=200, content={"message": "Automatic payments configured successfully"})
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        return JSONResponse(status_code=500, content={"error": "An internal server error occurred while setting up automatic payments."})
 
 @app.get("/test-payment", response_class=HTMLResponse)
 async def test_payment(request: Request):
@@ -1331,7 +1344,7 @@ async def test_payment(request: Request):
             "error.html",
             {
                 "request": request,
-                "error_message": str(e)
+                "error_message": "An internal server error occurred while rendering the test payment page."
             }
         )
 
@@ -1368,7 +1381,7 @@ async def create_payment_intent(amount: dict):
         logging.error("=== Payment intent creation failed ===")
         logging.error(f"Error creating payment intent: {str(e)}")
         logging.exception("Full payment intent error:")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="An internal server error occurred while creating the payment intent.")
 
 @app.post("/stripe-webhook")
 async def stripe_webhook(request: Request):
@@ -1399,7 +1412,7 @@ async def stripe_webhook(request: Request):
     except Exception as e:
         logging.error(f"Webhook error: {str(e)}")
         logging.exception("Full webhook error:")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="An internal server error occurred while processing the webhook.")
 
 if __name__ == "__main__":
     import uvicorn

@@ -260,10 +260,10 @@ createKeyBtn.addEventListener('click', async () => {
             loadApiKeys();
         } else {
             const error = await response.json();
-            alert(`Error creating API key: ${error.detail}`);
+            alert(`Error creating API key: ${document.createTextNode(error.detail).textContent}`);
         }
     } catch (error) {
-        alert(`Error creating API key: ${error.message}`);
+        alert(`Error creating API key: ${document.createTextNode(error.message).textContent}`);
     }
 });
 
@@ -292,10 +292,10 @@ async function deleteApiKey(element, key) {
             alert('API Key deleted successfully');
         } else {
             const error = await response.json();
-            alert(`Error deleting API key: ${error.detail}`);
+            alert(`Error deleting API key: ${document.createTextNode(error.detail).textContent}`);
         }
     } catch (error) {
-        alert(`Error deleting API key: ${error.message}`);
+        alert(`Error deleting API key: ${document.createTextNode(error.message).textContent}`);
     }
 }
 
@@ -317,15 +317,18 @@ async function loadApiKeys() {
             
             let keysHtml = '';
             keys.forEach(key => {
+                const safeKeyName = document.createTextNode(key.name).textContent;
+                const safePrefix = document.createTextNode(key.prefix).textContent;
+                
                 keysHtml += `
                 <div class="list-group-item">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="mb-1">${key.name}</h6>
+                            <h6 class="mb-1">${safeKeyName}</h6>
                             <p class="mb-1 text-muted small">Created: ${new Date(key.created_at).toLocaleString()}</p>
                             <p class="mb-0 small">
                                 <span class="badge bg-${key.is_active ? 'success' : 'danger'}">${key.is_active ? 'Active' : 'Inactive'}</span>
-                                ${key.prefix ? `<span class="text-muted">Prefix: ${key.prefix}...</span>` : ''}
+                                ${safePrefix ? `<span class="text-muted">Prefix: ${safePrefix}...</span>` : ''}
                             </p>
                         </div>
                         <div>
@@ -339,10 +342,12 @@ async function loadApiKeys() {
             keysList.innerHTML = keysHtml;
         } else {
             const error = await response.json();
-            document.getElementById('apiKeysList').innerHTML = `<div class="text-center p-3 text-danger">Error loading API keys: ${error.detail}</div>`;
+            const safeErrorMessage = document.createTextNode(error.detail).textContent;
+            document.getElementById('apiKeysList').innerHTML = `<div class="text-center p-3 text-danger">Error loading API keys: ${safeErrorMessage}</div>`;
         }
     } catch (error) {
-        document.getElementById('apiKeysList').innerHTML = `<div class="text-center p-3 text-danger">Error loading API keys: ${error.message}</div>`;
+        const safeErrorMessage = document.createTextNode(error.message).textContent;
+        document.getElementById('apiKeysList').innerHTML = `<div class="text-center p-3 text-danger">Error loading API keys: ${safeErrorMessage}</div>`;
     }
 }
 

@@ -22,8 +22,9 @@ def migrate_invoices():
     db_user = os.environ.get("POSTGRES_USER", "db_user")  # Use generic default
     db_password = os.environ.get("POSTGRES_PASSWORD", "")  # Empty default password
     
-    db_url = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
-    logger.info(f"Migrating invoices table at: {db_url}")
+    # Create connection string for logging with masked password
+    masked_db_url = f"postgresql://{db_user}:****@{db_host}:{db_port}/{db_name}"
+    logger.info(f"Migrating invoices table at: {masked_db_url}")
     
     try:
         # Connect to PostgreSQL
