@@ -8,19 +8,22 @@ import enum
 import logging
 
 # Database configuration
+# Default to SQLite if no DATABASE_URL is provided
 SQLALCHEMY_DATABASE_URL = os.environ.get(
-    "DATABASE_URL", "postgresql://flows_user:flows_password@db:5432/flows_db"
+    "DATABASE_URL", "sqlite:///flows.db"
 )
-logging.info(f"Using database URL: {SQLALCHEMY_DATABASE_URL}")
+logging.info(f"Using database URL: {SQLALCHEMY_DATABASE_URL.split('@')[0].split('://')[0]}://****@****")
 
 # Make sure directory exists if using a path
-db_path = SQLALCHEMY_DATABASE_URL.replace("postgresql://", "")
-if db_path.startswith("./"):
-    db_path = db_path[2:]
-db_dir = os.path.dirname(db_path)
-if db_dir and not os.path.exists(db_dir):
-    os.makedirs(db_dir, exist_ok=True)
-logging.info(f"Using PostgreSQL database at {db_path}")
+if SQLALCHEMY_DATABASE_URL.startswith("postgresql://"):
+    db_path = SQLALCHEMY_DATABASE_URL.split("@")[1] if "@" in SQLALCHEMY_DATABASE_URL else ""
+    logging.info(f"Using PostgreSQL database")
+elif SQLALCHEMY_DATABASE_URL.startswith("sqlite:///"):
+    db_path = SQLALCHEMY_DATABASE_URL.replace("sqlite:///", "")
+    db_dir = os.path.dirname(db_path)
+    if db_dir and not os.path.exists(db_dir):
+        os.makedirs(db_dir, exist_ok=True)
+    logging.info(f"Using SQLite database at {db_path}")
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

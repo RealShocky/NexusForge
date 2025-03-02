@@ -5,7 +5,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://flows_user:flows_password@db:5432/flows_db
+      - DATABASE_URL=${DATABASE_URL:-postgresql://flows_user:flows_password@db:5432/flows_db}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
       - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
@@ -21,9 +21,9 @@ services:
   db:
     image: postgres:15-alpine
     environment:
-      - POSTGRES_USER=flows_user
-      - POSTGRES_PASSWORD=flows_password
-      - POSTGRES_DB=flows_db
+      - POSTGRES_USER=${POSTGRES_USER:-flows_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-flows_password}
+      - POSTGRES_DB=${POSTGRES_DB:-flows_db}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
