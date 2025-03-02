@@ -82,7 +82,7 @@ async def landing_page(request: Request, current_user: User = Depends(get_curren
 # Login route
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request, error: Optional[str] = None):
-    return templates.TemplateResponse("login.html", {"request": request, "error": error, "csrf_token": get_csrf_token()})
+    return templates.TemplateResponse("login.html", {"request": request, "error": error, "csrf_token": get_csrf_token(request)})
 
 @router.post("/login", response_class=HTMLResponse)
 async def login_submit(
@@ -108,7 +108,7 @@ async def login_submit(
         
         return templates.TemplateResponse(
             "login.html", 
-            {"request": request, "error": "Incorrect username or password", "csrf_token": get_csrf_token()}
+            {"request": request, "error": "Incorrect username or password", "csrf_token": get_csrf_token(request)}
         )
     
     # Record successful login attempt
@@ -142,7 +142,7 @@ async def login_submit(
 
 @router.get("/register", response_class=HTMLResponse)
 async def register_page(request: Request, error: Optional[str] = None):
-    return templates.TemplateResponse("register.html", {"request": request, "error": error, "csrf_token": get_csrf_token()})
+    return templates.TemplateResponse("register.html", {"request": request, "error": error, "csrf_token": get_csrf_token(request)})
 
 @router.post("/register", response_class=HTMLResponse)
 async def register_submit(
@@ -160,13 +160,13 @@ async def register_submit(
     if password != confirm_password:
         return templates.TemplateResponse(
             "register.html", 
-            {"request": request, "error": "Passwords do not match", "csrf_token": get_csrf_token()}
+            {"request": request, "error": "Passwords do not match", "csrf_token": get_csrf_token(request)}
         )
     
     if not terms:
         return templates.TemplateResponse(
             "register.html", 
-            {"request": request, "error": "You must agree to the Terms of Service", "csrf_token": get_csrf_token()}
+            {"request": request, "error": "You must agree to the Terms of Service", "csrf_token": get_csrf_token(request)}
         )
     
     # Check if username already exists
@@ -174,7 +174,7 @@ async def register_submit(
     if db_user:
         return templates.TemplateResponse(
             "register.html", 
-            {"request": request, "error": "Username already registered", "csrf_token": get_csrf_token()}
+            {"request": request, "error": "Username already registered", "csrf_token": get_csrf_token(request)}
         )
     
     # Check if email already exists
@@ -182,7 +182,7 @@ async def register_submit(
     if db_email:
         return templates.TemplateResponse(
             "register.html", 
-            {"request": request, "error": "Email already registered", "csrf_token": get_csrf_token()}
+            {"request": request, "error": "Email already registered", "csrf_token": get_csrf_token(request)}
         )
     
     # Validate password strength
@@ -190,7 +190,7 @@ async def register_submit(
     if not is_strong:
         return templates.TemplateResponse(
             "register.html", 
-            {"request": request, "error": password_error, "csrf_token": get_csrf_token()}
+            {"request": request, "error": password_error, "csrf_token": get_csrf_token(request)}
         )
     
     # Create user
